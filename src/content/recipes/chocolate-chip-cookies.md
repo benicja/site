@@ -1,6 +1,5 @@
 ---
 title: "Perfect Chocolate Chip Cookies"
-slug: chocolate-chip-cookies
 description: "Crispy edges, chewy centers, and loaded with chocolate chips - these are our family's favorite cookies that disappear as fast as we can make them."
 featured_image: "/images/chocolate-chip-cookies.jpg"
 prep_time: 15

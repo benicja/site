@@ -30,11 +30,6 @@ collections_config:
             required: true
             comment: The recipe name
             
-          - name: slug
-            type: text
-            required: true
-            comment: URL-friendly slug (used in recipe links)
-            
           - name: description
             type: textarea
             comment: Brief description of the recipe
@@ -103,7 +98,7 @@ collections_config:
             comment: Additional recipe notes or tips
 
 _defaults:
-  collections/recipes:
+  recipes:
     schema: recipe
     _inputs:
       title:

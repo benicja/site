@@ -1,6 +1,5 @@
 ---
 title: "Grandma's Sunday Roast Chicken"
-slug: grandmas-roast-chicken
 description: "A classic family dinner that fills the house with incredible aromas. Perfectly seasoned and roasted to golden perfection, served with roasted vegetables."
 featured_image: "/images/roast-chicken.jpg"
 prep_time: 20

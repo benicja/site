@@ -1,6 +1,5 @@
 ---
 title: "5-Minute Avocado Toast"
-slug: avocado-toast
 description: "A healthy, delicious breakfast or snack that's ready in minutes. Perfect avocado on crispy sourdough with a sprinkle of everything seasoning."
 featured_image: "/images/avocado-toast.jpg"
 prep_time: 5
