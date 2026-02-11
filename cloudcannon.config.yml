@@ -10,98 +10,10 @@ build:
 # Collection configuration
 collections_config:
   recipes:
-    path: src/content/recipes
+    path: src/recipes
     name: Recipes
-    icon: restaurant_menu
-    description: Manage your cooking and baking recipes
     output: true
     url: /recipes/[slug]/
-    filter:
-      - "*.md"
-    
-    create:
-      path: '[slug].md'
-      
-    schemas:
-      recipe:
-        name: Recipe
-        icon: restaurant
-        fields:
-          - name: title
-            type: text
-            required: true
-            comment: The recipe name
-            
-          - name: description
-            type: textarea
-            comment: Brief description of the recipe
-            
-          - name: featured_image
-            type: image
-            comment: Main recipe photo
-            
-          - name: prep_time
-            type: number
-            comment: Prep time in minutes
-            
-          - name: cook_time
-            type: number
-            comment: Cooking time in minutes
-            
-          - name: servings
-            type: number
-            comment: Number of servings
-            
-          - name: difficulty
-            type: select
-            options:
-              values: [Easy, Medium, Hard]
-              
-          - name: category
-            type: select
-            options:
-              values: [Breakfast, Lunch, Dinner, Dessert, Snack, Appetizer]
-              
-          - name: ingredients
-            type: array
-            comment: List of ingredients with amounts
-            options:
-              structures:
-                - label: Ingredient
-                  icon: add
-                  fields:
-                    - name: item
-                      type: text
-                      comment: Ingredient name
-                    - name: amount
-                      type: text
-                      comment: Quantity and unit
-                      
-          - name: instructions
-            type: array
-            comment: Step-by-step cooking instructions
-            options:
-              structures:
-                - label: Step
-                  icon: format_list_numbered
-                  fields:
-                    - name: step
-                      type: textarea
-                      comment: Instruction step
-                      
-          - name: tags
-            type: multiselect
-            comment: Recipe tags for filtering
-            options:
-              values: [Vegetarian, Vegan, Gluten-Free, Dairy-Free, Low-Carb, Quick, Make-Ahead, Holiday]
-              
-          - name: notes
-            type: rich_text
-            comment: Additional recipe notes or tips
-
-_defaults:
-  recipes:
-    schema: recipe
 
 # Editor interface settings
 editor:
