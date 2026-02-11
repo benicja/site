@@ -99,6 +99,10 @@ collections_config:
             type: rich_text
             comment: Additional recipe notes or tips
 
+_defaults:
+  collections/recipes:
+    schema: recipe
+
 # Editor interface settings
 editor:
   default_path: /src/content/recipes/
