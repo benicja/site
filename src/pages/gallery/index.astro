@@ -1,9 +1,9 @@
 ---
 export const prerender = false;
 
-import Layout from '../layouts/Layout.astro';
-import { SESSION_COOKIE, getUserFromSession, isUserAdmin, getSiteConfig } from '../lib/auth';
-import { getAlbums } from '../lib/gallery';
+import Layout from '../../layouts/Layout.astro';
+import { SESSION_COOKIE, getUserFromSession, isUserAdmin, getSiteConfig } from '../../lib/auth';
+import { getAlbums } from '../../lib/gallery';
 
 // Check if user is authenticated
 let user = null;
