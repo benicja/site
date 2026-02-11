@@ -10,7 +10,7 @@ build:
 # Collection configuration
 collections_config:
   recipes:
-    path: content/recipes
+    path: src/content/recipes
     name: Recipes
     icon: restaurant_menu
     description: Manage your cooking and baking recipes
