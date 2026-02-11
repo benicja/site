@@ -11,7 +11,7 @@ export async function getStaticPaths() {
 }
 
 const { recipe } = Astro.props;
-const { data, slug } = recipe;
+const { data } = recipe;
 const { Content } = await recipe.render();
 
 // Calculate total time

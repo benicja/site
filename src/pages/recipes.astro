@@ -68,7 +68,7 @@ const categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Appetiz
         {/* Recipes by Category */}
         {categories.map(category => (
           recipesByCategory[category] && recipesByCategory[category].length > 0 && (
-            <div class="mb-12" key={category}>
+            <div class="mb-12">
               <h2 class="text-2xl font-semibold text-gray-900 mb-6">{category}</h2>
               <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recipesByCategory[category].map(recipe => (
