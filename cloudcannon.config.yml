@@ -16,6 +16,8 @@ collections_config:
     description: Manage your cooking and baking recipes
     output: true
     url: /recipes/[slug]/
+    filter: 
+      base: "md"
     
     create:
       path: '[slug].md'
