@@ -2,9 +2,18 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
+import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
 
-// Get email from query params if provided
-const email = Astro.url.searchParams.get('email') || '';
+// Get user session to force their official email
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+const user = sessionId ? await getUserFromSession(sessionId) : null;
+
+// Only allow access to this page if we have a session (signed in via Google)
+if (!user) {
+  return Astro.redirect('/auth/login');
+}
+
+const email = user.user_email;
 ---
 
 <Layout title="Request Gallery Access" description="Request access to the family photo gallery">
@@ -25,17 +34,20 @@ const email = Astro.url.searchParams.get('email') || '';
       <form id="accessRequestForm" class="space-y-6">
         <div>
           <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-            Email Address *
+            Email Address (Verification from Google)
           </label>
           <input
             type="email"
             id="email"
             name="email"
             required
+            readonly
             value={email}
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="your.email@gmail.com"
+            class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-medium"
           />
+          <p class="mt-2 text-xs text-gray-500">
+            This request will be sent for your verified Google account.
+          </p>
         </div>
 
         <div>
