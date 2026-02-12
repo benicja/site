@@ -2,12 +2,13 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import { SESSION_COOKIE, getUserFromSession, isUserAdmin, getSiteConfig } from '../../lib/auth';
+import { SESSION_COOKIE, getUserFromSession, isUserAdmin, getSiteConfig, isEmailApproved } from '../../lib/auth';
 import { getAlbums, type Album } from '../../lib/gallery';
 
 // Check if user is authenticated
 let user = null;
 let isAdmin = false;
+let isApproved = false;
 let siteConfig = null;
 let albums: Album[] = [];
 let error = '';
@@ -16,10 +17,17 @@ try {
   const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
   user = sessionId ? await getUserFromSession(sessionId) : null;
   isAdmin = sessionId ? await isUserAdmin(sessionId) : false;
+  isApproved = user ? await isEmailApproved(user.user_email) : false;
+
+  // If user is authenticated but not approved, send them to request access
+  if (user && !isApproved && !isAdmin) {
+    return Astro.redirect('/gallery/request-access');
+  }
+
   siteConfig = await getSiteConfig();
   
   // Fetch albums from Supabase
-  albums = user ? await getAlbums() : [];
+  albums = user && (isApproved || isAdmin) ? await getAlbums() : [];
 } catch (e) {
   console.error('Gallery page error:', e);
   error = e instanceof Error ? e.message : 'Unknown error occurred';

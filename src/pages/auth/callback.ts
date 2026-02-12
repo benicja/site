@@ -41,6 +41,23 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     
     const userInfo: { email: string; id: string; verified_email: boolean } = await userInfoResponse.json();
     
+    // Create or update session for the user immediately
+    const sessionId = await createUserSession(
+      userInfo.email,
+      userInfo.id,
+      tokens.accessToken(),
+      tokens.hasRefreshToken() ? tokens.refreshToken() : undefined
+    );
+    
+    // Set session cookie
+    cookies.set(SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      secure: import.meta.env.PROD, // true in production
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: '/'
+    });
+
     // If we are in "Link Photos" mode, save the refresh token to site config
     if (isLinkingPhotos) {
       const refreshToken = tokens.hasRefreshToken() ? tokens.refreshToken() : undefined;
@@ -70,33 +87,16 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     // Check if email is approved
     const approved = await isEmailApproved(userInfo.email);
     
-    if (!approved) {
-      // Redirect to access request page with email
-      return redirect(`/gallery/request-access?email=${encodeURIComponent(userInfo.email)}`);
-    }
-    
-    // Create session
-    const sessionId = await createUserSession(
-      userInfo.email,
-      userInfo.id,
-      tokens.accessToken(),
-      tokens.hasRefreshToken() ? tokens.refreshToken() : undefined
-    );
-    
-    // Set session cookie
-    cookies.set(SESSION_COOKIE, sessionId, {
-      httpOnly: true,
-      secure: false, // Set to false for local development to ensure it's sent over HTTP
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-      path: '/'
-    });
-    
     // Clean up OAuth cookies
     cookies.delete('oauth_state', { path: '/' });
     cookies.delete('oauth_code_verifier', { path: '/' });
+
+    if (!approved) {
+      // Redirect to access request page (user now has a session so they can view it)
+      return redirect('/gallery/request-access');
+    }
     
-    // Redirect to gallery
+    // Redirect to gallery main page
     return redirect('/gallery');
     
   } catch (error) {

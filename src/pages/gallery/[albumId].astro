@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { SESSION_COOKIE, getUserFromSession, isEmailApproved, isUserAdmin } from '../../lib/auth';
 import { getAlbumById, getPhotosByAlbumId } from '../../lib/gallery';
 
 const { albumId } = Astro.params;
@@ -10,8 +10,10 @@ const { albumId } = Astro.params;
 // Check authentication
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
 const user = sessionId ? await getUserFromSession(sessionId) : null;
+const isApproved = user ? await isEmailApproved(user.user_email) : false;
+const isAdmin = sessionId ? await isUserAdmin(sessionId) : false;
 
-if (!user) {
+if (!user || (!isApproved && !isAdmin)) {
   return Astro.redirect('/gallery');
 }
 
