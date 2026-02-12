@@ -6,7 +6,11 @@ import netlify from '@astrojs/netlify';
 // https://astro.build/config
 export default defineConfig({
   integrations: [tailwind(), react()],
-  output: 'static',
+  output: 'server',
   adapter: netlify(),
-  site: 'https://benicja.com'
+  site: 'https://benicja.com',
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: 'hover'
+  }
 });

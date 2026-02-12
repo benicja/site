@@ -1,11 +1,10 @@
 ---
 title: Chicken and Leak Pie
 description: It's very tasty
-featured_image: /images/recipes/pxl_20251012_140215156.mp.jpg
+featured_image: "https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?auto=format&fit=crop&q=80&w=1000"
 prep_time: 4
 cook_time: 4
 servings: 6
-difficulty: Easy
 category: Dinner
 ingredients:
   - item: leek
@@ -13,8 +12,6 @@ ingredients:
 instructions:
   - step: eat
   - step: yum
-tags:
-  - Vegetarian
 notes: hi
 publishDate: 2026-02-11T15:50:00.000+00:00
 draft: false

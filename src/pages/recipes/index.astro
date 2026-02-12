@@ -1,7 +1,14 @@
 ---
+export const prerender = false;
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
+import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { getRecipeHearts, getUserHearts } from '../../lib/hearts';
+
+// Get current user
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+const user = sessionId ? await getUserFromSession(sessionId) : null;
 
 // Get all recipes and sort by date (newest first)
 const recipes = await getCollection('recipes');
@@ -9,94 +16,189 @@ const sortedRecipes = recipes.sort((a, b) =>
   (b.data.publishDate?.getTime() || 0) - (a.data.publishDate?.getTime() || 0)
 );
 
-// Group recipes by category
-const recipesByCategory = sortedRecipes.reduce((acc, recipe) => {
-  const category = recipe.data.category;
-  if (!acc[category]) {
-    acc[category] = [];
-  }
-  acc[category].push(recipe);
-  return acc;
-}, {} as Record<string, typeof recipes>);
-
-const categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack', 'Appetizer'];
+// Get heart data
+const globalHearts = await getRecipeHearts();
+const userHearts = user ? await getUserHearts(user.user_email) : new Set();
 ---
 
-<Layout title="Family Recipes" description="Browse our collection of beloved family recipes, tested and perfected in our kitchen.">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <!-- Page Header -->
-    <div class="text-center mb-12">
-      <h1 class="text-4xl font-bold text-gray-900 mb-4">Family Recipes</h1>
-      <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-        A collection of our favorite recipes, passed down through generations and perfected in our kitchen.
-        Each one tells a story and brings our family together.
-      </p>
-    </div>
-
-    <!-- Recipe Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-      <div class="bg-white rounded-lg p-4 text-center shadow-sm">
-        <div class="text-2xl font-bold text-primary-600">{recipes.length}</div>
-        <div class="text-sm text-gray-600">Total Recipes</div>
-      </div>
-      <div class="bg-white rounded-lg p-4 text-center shadow-sm">
-        <div class="text-2xl font-bold text-primary-600">{Object.keys(recipesByCategory).length}</div>
-        <div class="text-sm text-gray-600">Categories</div>
-      </div>
-      <div class="bg-white rounded-lg p-4 text-center shadow-sm">
-        <div class="text-2xl font-bold text-primary-600">{recipes.filter(r => r.data.tags?.includes('Quick')).length}</div>
-        <div class="text-sm text-gray-600">Quick Recipes</div>
-      </div>
-      <div class="bg-white rounded-lg p-4 text-center shadow-sm">
-        <div class="text-2xl font-bold text-primary-600">{recipes.filter(r => r.data.tags?.includes('Vegetarian')).length}</div>
-        <div class="text-sm text-gray-600">Vegetarian</div>
-      </div>
-    </div>
-
+<Layout title="Recipes" description="A collection of our favorite family recipes.">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
     {recipes.length > 0 ? (
-      <>
-        {/* All Recipes Grid */}
-        <div class="mb-16">
-          <h2 class="text-2xl font-semibold text-gray-900 mb-6">All Recipes</h2>
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedRecipes.map(recipe => (
-              <RecipeCard recipe={recipe} />
+      <div class="space-y-6">
+        {/* Search & Filters */}
+        <div class="space-y-4">
+          <div class="w-full">
+            <div class="relative">
+              <input 
+                type="text" 
+                id="recipe-search" 
+                placeholder="Search recipes..." 
+                class="w-full px-5 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:border-gray-400 transition-colors duration-[250ms] font-light text-base"
+              />
+              <div class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            {[ 'Breakfast', 'Dinner', 'Dessert' ].map(cat => (
+              <button 
+                class="filter-btn px-4 py-1.5 rounded-full border border-gray-100 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-400 transition-all duration-100 select-none data-[active=true]:bg-gray-100/50 data-[active=true]:text-gray-900 data-[active=true]:border-gray-400 [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-200"
+                data-filter="category"
+                data-value={cat}
+                data-active="false"
+              >
+                {cat}
+              </button>
             ))}
+            
+            {user && (
+              <button 
+                class="filter-btn px-4 py-1.5 rounded-full border border-gray-100 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-400 transition-all duration-100 select-none flex items-center gap-2 data-[active=true]:bg-red-50/50 data-[active=true]:text-red-500 data-[active=true]:border-red-400 [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-200"
+                data-filter="hearted"
+                data-active="false"
+              >
+                <svg class="w-3.5 h-3.5 fill-none stroke-current transition-all duration-100" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                Favourites
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Recipes by Category */}
-        {categories.map(category => (
-          recipesByCategory[category] && recipesByCategory[category].length > 0 && (
-            <div class="mb-12">
-              <h2 class="text-2xl font-semibold text-gray-900 mb-6">{category}</h2>
-              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recipesByCategory[category].map(recipe => (
-                  <RecipeCard recipe={recipe} />
-                ))}
+        <section>
+          <div id="recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
+            {sortedRecipes.map(recipe => (
+              <div 
+                class="recipe-item" 
+                data-title={recipe.data.title.toLowerCase()}
+                data-category={recipe.data.category}
+                data-hearted={userHearts.has(recipe.slug).toString()}
+              >
+                <RecipeCard 
+                  recipe={recipe} 
+                  user={user}
+                  isHearted={userHearts.has(recipe.slug)}
+                  heartCount={(globalHearts as any)[recipe.slug] || 0}
+                />
               </div>
-            </div>
-          )
-        ))}
-      </>
+            ))}
+          </div>
+          <div id="no-results" class="hidden py-32 text-center">
+             <h2 class="text-2xl font-serif text-gray-400">No recipes match your search.</h2>
+          </div>
+        </section>
+      </div>
     ) : (
-      /* No Recipes State */
-      <div class="text-center py-12">
-        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-        </div>
-        <h3 class="text-xl font-semibold text-gray-900 mb-2">No recipes yet</h3>
-        <p class="text-gray-600 mb-6">
-          We're still building our recipe collection. Check back soon for delicious family favorites!
-        </p>
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-          <p class="text-blue-800 text-sm">
-            <strong>For site admin:</strong> Add recipes by creating markdown files in <code class="bg-blue-100 px-1 rounded">src/content/recipes/</code>
-          </p>
-        </div>
+      <div class="py-32 text-center border-t border-gray-100">
+         <h2 class="text-2xl font-serif text-gray-400">Our recipe book is currently empty.</h2>
+         <p class="text-sm text-gray-400 mt-4 uppercase tracking-widest font-bold">Check back soon for upcoming treats.</p>
       </div>
     )}
   </div>
+
+  <script is:inline>
+    function initSearch() {
+      const searchInput = document.getElementById('recipe-search');
+      const recipeItems = document.querySelectorAll('.recipe-item');
+      const recipesGrid = document.getElementById('recipes-grid');
+      const noResults = document.getElementById('no-results');
+      const filterBtns = document.querySelectorAll('.filter-btn');
+
+      if (!searchInput) return;
+
+      let activeCategory = null;
+      let showHeartedOnly = false;
+
+      const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+      function updateGrid() {
+        const query = normalize(searchInput.value.trim());
+        let hasResults = false;
+
+        recipeItems.forEach(item => {
+          const title = normalize(item.getAttribute('data-title') || '');
+          const category = item.getAttribute('data-category');
+          const isHearted = item.getAttribute('data-hearted') === 'true';
+
+          let matchesSearch = title.includes(query);
+          let matchesCategory = !activeCategory || category === activeCategory;
+          let matchesHearted = !showHeartedOnly || isHearted;
+
+          if (matchesSearch && matchesCategory && matchesHearted) {
+            item.classList.remove('hidden');
+            hasResults = true;
+          } else {
+            item.classList.add('hidden');
+          }
+        });
+
+        if (hasResults) {
+          noResults.classList.add('hidden');
+          recipesGrid.classList.remove('hidden');
+        } else {
+          noResults.classList.remove('hidden');
+          recipesGrid.classList.add('hidden');
+        }
+      }
+
+      // Handle Category/Hearted Buttons
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.getAttribute('data-filter');
+          const value = btn.getAttribute('data-value');
+          const wasActive = btn.getAttribute('data-active') === 'true';
+
+          if (type === 'category') {
+            if (wasActive) {
+              activeCategory = null;
+              btn.setAttribute('data-active', 'false');
+            } else {
+              // Reset other category buttons
+              filterBtns.forEach(b => {
+                if (b.getAttribute('data-filter') === 'category') {
+                  b.setAttribute('data-active', 'false');
+                }
+              });
+              activeCategory = value;
+              btn.setAttribute('data-active', 'true');
+            }
+          } else if (type === 'hearted') {
+            showHeartedOnly = !showHeartedOnly;
+            btn.setAttribute('data-active', showHeartedOnly.toString());
+            const heartSvg = btn.querySelector('svg');
+            if (showHeartedOnly) {
+              heartSvg?.classList.add('fill-current');
+            } else {
+              heartSvg?.classList.remove('fill-current');
+            }
+          }
+
+          updateGrid();
+        });
+      });
+
+      // Handle Search Input
+      searchInput.addEventListener('input', updateGrid);
+
+      // Check URL for initial category
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialCat = urlParams.get('category');
+      if (initialCat) {
+        const targetBtn = Array.from(filterBtns).find(b => b.getAttribute('data-value') === initialCat);
+        if (targetBtn) targetBtn.click();
+      }
+    }
+
+    // Initialize on load
+    initSearch();
+    
+    // Re-initialize after view transitions
+    document.addEventListener('astro:after-swap', initSearch);
+    document.addEventListener('astro:page-load', initSearch);
+  </script>
 </Layout>

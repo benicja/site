@@ -6,9 +6,9 @@ A beautiful, family-focused website built with Astro, featuring a recipe collect
 
 ### Recipe Collection
 - **Git-Based Content Management**: Edit recipes directly in markdown files
-- **Structured Recipe Data**: Ingredients, instructions, timing, difficulty, and tags
+- **Structured Recipe Data**: Ingredients, instructions, timing
 - **Responsive Design**: Beautiful recipe cards and detailed recipe pages
-- **Search & Filter**: Find recipes by category, tags, and difficulty
+- **Search & Filter**: Find recipes by category
 
 ### Private Gallery (Coming Soon)
 - **Google Photos Integration**: Seamless sync with your Google Photos albums  
@@ -59,15 +59,12 @@ description: \"Brief description\"
 featured_image: \"/images/recipe-photo.jpg\"
 prep_time: 15
 cook_time: 30
-servings: 4
-difficulty: \"Easy\"
 category: \"Dinner\"
 ingredients:
   - item: \"Ingredient name\"
     amount: \"1 cup\"
 instructions:
   - step: \"Step description\"
-tags: [\"Vegetarian\", \"Quick\"]
 ---
 
 Additional recipe notes in markdown format.

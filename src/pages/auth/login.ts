@@ -5,6 +5,18 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ cookies, redirect, url }) => {
   try {
+    // Capture the target redirect path if provided
+    const next = url.searchParams.get('next');
+    if (next) {
+      cookies.set('auth_redirect', next, {
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: 'lax',
+        maxAge: 60 * 10,
+        path: '/'
+      });
+    }
+
     // Generate state and code verifier for secure OAuth
     const state = generateState();
     const codeVerifier = generateCodeVerifier();

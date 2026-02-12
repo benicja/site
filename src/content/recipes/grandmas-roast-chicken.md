@@ -1,11 +1,10 @@
 ---
 title: "Grandma's Sunday Roast Chicken"
 description: "A classic family dinner that fills the house with incredible aromas. Perfectly seasoned and roasted to golden perfection, served with roasted vegetables."
-featured_image: "/images/roast-chicken.jpg"
+featured_image: "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?auto=format&fit=crop&q=80&w=1000"
 prep_time: 20
 cook_time: 90
 servings: 6
-difficulty: "Medium"
 category: "Dinner"
 ingredients:
   - item: "Whole chicken"
@@ -40,7 +39,6 @@ instructions:
   - step: "Arrange vegetables around the chicken in a large roasting pan."
   - step: "Roast for 60-75 minutes, or until internal temperature reaches 165°F (74°C) in the thickest part of the thigh."
   - step: "Let rest for 10 minutes before carving. Serve with the roasted vegetables and pan juices."
-tags: ["Make-Ahead", "Holiday"]
 publishDate: 2026-02-09T15:30:00Z
 draft: false
 ---

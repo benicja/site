@@ -1,0 +1,388 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import RecipeCMSCard from '../components/RecipeCMSCard.astro';
+import { SESSION_COOKIE, getUserFromSession, isUserAdmin } from '../lib/auth';
+import { getAlbums } from '../lib/gallery';
+
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+const user = sessionId ? await getUserFromSession(sessionId) : null;
+const isAdmin = sessionId ? await isUserAdmin(sessionId) : false;
+
+// Strict admin check
+if (!isAdmin) {
+  return Astro.redirect('/gallery');
+}
+
+const albums = await getAlbums();
+---
+
+<Layout title="Site Administration" description="Manage gallery and site configuration">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="space-y-12">
+      <!-- Recipe Management -->
+      <RecipeCMSCard />
+
+      <!-- Sync Column -->
+      <section class="bg-gray-50 border border-gray-100 rounded-3xl p-8 md:p-12">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xl font-serif text-gray-900">Add Albums</h2>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Google Photos Sync</p>
+          </div>
+        </div>
+
+        <div class="space-y-4 mb-6">
+          <div>
+            <label class="text-xs font-bold text-gray-600 uppercase tracking-widest block mb-2">Single Album</label>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="url" 
+                id="sync-url" 
+                placeholder="Paste Google Photos Share Link..." 
+                class="flex-1 px-6 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-200 transition-all font-light"
+              />
+              <button 
+                id="sync-btn"
+                class="px-10 py-4 bg-gray-900 text-white rounded-xl transition-all font-bold text-sm uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <span id="btn-text">Add</span>
+                <div id="btn-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </button>
+            </div>
+            <div id="sync-status" class="mt-6 text-xs font-mono uppercase tracking-tight hidden"></div>
+          </div>
+
+          <div class="border-t border-gray-200 pt-6">
+            <label class="text-xs font-bold text-gray-600 uppercase tracking-widest block mb-2">Batch Add Multiple</label>
+            <textarea 
+              id="batch-urls" 
+              placeholder="Paste multiple Google Photos links (one per line)..." 
+              rows="6"
+              class="w-full px-6 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-200 transition-all font-light text-sm"
+            ></textarea>
+            <button 
+              id="batch-btn"
+              class="mt-4 px-10 py-4 bg-gray-700 text-white rounded-xl transition-all font-bold text-sm uppercase tracking-widest hover:bg-gray-600 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <span id="batch-btn-text">Add All</span>
+              <div id="batch-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </button>
+            <div id="batch-status" class="mt-6 text-xs font-mono uppercase tracking-tight hidden max-h-48 overflow-y-auto p-4 bg-white border border-gray-200 rounded-lg"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Current Albums List -->
+      <section>
+        <h2 class="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Current Albums ({albums.length})</h2>
+        <p class="text-xs text-gray-500 mb-4">Drag to reorder</p>
+        <div id="albums-list" class="space-y-4">
+          {albums.map(album => (
+            <div 
+              draggable="true"
+              class="album-item flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors cursor-move hover:shadow-md"
+              data-album-id={album.google_album_id}
+            >
+              <div class="flex items-center gap-4 flex-1">
+                <div class="w-2 h-2 bg-gray-300 rounded-full flex-shrink-0"></div>
+                <div class="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden">
+                  <img src={album.cover_image_url} alt="" class="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-gray-900">{album.title}</h3>
+                  <p class="text-[10px] text-gray-400 uppercase tracking-widest">{album.photo_count} Photos</p>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="text-[9px] font-bold px-2 py-1 bg-gray-100 text-gray-500 rounded uppercase tracking-tighter">Synced</span>
+                <button 
+                  class="delete-album-btn text-[9px] font-bold px-2 py-1 bg-red-100 text-red-600 rounded uppercase tracking-tighter hover:bg-red-200 transition-colors"
+                  data-album-id={album.google_album_id}
+                  title="Delete this album"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script is:inline>
+    let draggedElement = null;
+
+    function initializePortal() {
+      const syncBtn = document.getElementById('sync-btn');
+      const syncUrl = document.getElementById('sync-url');
+      const syncStatus = document.getElementById('sync-status');
+      const btnText = document.getElementById('btn-text');
+      const btnSpinner = document.getElementById('btn-spinner');
+
+      // Single album upload
+      if (syncBtn && syncUrl) {
+        if (syncBtn._hasHandler) return;
+        
+        syncBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const url = syncUrl.value.trim();
+          if (!url) return;
+
+          syncStatus.classList.remove('hidden', 'text-red-500', 'text-green-500');
+          syncStatus.classList.add('text-gray-500');
+          syncStatus.textContent = 'Contacting server...';
+          syncBtn.disabled = true;
+          btnText.textContent = 'Adding...';
+          btnSpinner.classList.remove('hidden');
+
+          try {
+            const response = await fetch('/api/gallery/sync-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: url })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              syncStatus.textContent = `Success: ${result.title} added (${result.count} photos)`;
+              syncStatus.classList.add('text-green-500');
+              syncStatus.classList.remove('hidden');
+              syncUrl.value = '';
+              setTimeout(() => window.location.reload(), 2000);
+            } else {
+              throw new Error(result.error || 'Failed to add album');
+            }
+          } catch (err) {
+            const errMsg = err.message;
+            const fullErr = typeof err === 'string' ? err : JSON.stringify(err, null, 2);
+            syncStatus.textContent = `Error: ${errMsg}`;
+            syncStatus.classList.add('text-red-500');
+            syncStatus.classList.remove('hidden');
+          } finally {
+            syncBtn.disabled = false;
+            btnText.textContent = 'Add';
+            btnSpinner.classList.add('hidden');
+          }
+        });
+        
+        syncBtn._hasHandler = true;
+      }
+
+      // Batch upload
+      const batchBtn = document.getElementById('batch-btn');
+      const batchUrls = document.getElementById('batch-urls');
+      const batchStatus = document.getElementById('batch-status');
+      const batchBtnText = document.getElementById('batch-btn-text');
+      const batchSpinner = document.getElementById('batch-spinner');
+
+      if (batchBtn && batchUrls) {
+        if (batchBtn._hasHandler) return;
+
+        batchBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const urls = batchUrls.value
+            .split('\n')
+            .map(u => u.trim())
+            .filter(u => u.length > 0);
+
+          if (urls.length === 0) {
+            alert('Please paste at least one URL');
+            return;
+          }
+
+          batchStatus.classList.remove('hidden', 'text-red-600', 'text-green-600');
+          batchStatus.classList.add('text-gray-700');
+          batchStatus.innerHTML = `Processing ${urls.length} albums...`;
+          batchBtn.disabled = true;
+          batchBtnText.textContent = `Processing...`;
+          batchSpinner.classList.remove('hidden');
+
+          let successCount = 0;
+          let failureCount = 0;
+          const results = [];
+          
+          // Use adaptive delay: longer for batches with many items
+          const baseDelay = urls.length > 10 ? 2000 : urls.length > 5 ? 1500 : 1000;
+
+          for (let i = 0; i < urls.length; i++) {
+            const url = urls[i];
+            batchStatus.innerHTML = results.join('<br>') + `<br><span class="text-gray-500">Processing ${i + 1}/${urls.length}... (${baseDelay}ms delay)</span>`;
+            batchStatus.scrollTop = batchStatus.scrollHeight;
+
+            try {
+              const response = await fetch('/api/gallery/sync-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+              });
+
+              const result = await response.json();
+
+              if (response.status === 429) {
+                // Rate limited - show helpful message and stop
+                failureCount++;
+                results.push(`<span class="text-orange-600">⚠ Rate limited at position ${i + 1}. Wait 5+ minutes and retry remaining albums.</span>`);
+                batchStatus.classList.add('text-orange-600');
+                break;
+              } else if (result.success) {
+                successCount++;
+                results.push(`<span class="text-green-600">✓ ${result.title} (${result.count} photos)</span>`);
+              } else {
+                failureCount++;
+                results.push(`<span class="text-red-600">✗ Failed: ${result.error}</span>`);
+              }
+            } catch (err) {
+              failureCount++;
+              results.push(`<span class="text-red-600">✗ Error: ${err.message}</span>`);
+            }
+
+            // Delay before next request (adaptive)
+            if (i < urls.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, baseDelay));
+            }
+          }
+
+          batchStatus.classList.add(failureCount > 0 ? 'text-orange-600' : 'text-green-600');
+          batchStatus.innerHTML = results.join('<br>') + `<br><br><strong>Completed: ${successCount}/${urls.length} albums added</strong>`;
+          batchBtn.disabled = false;
+          batchBtnText.textContent = 'Add All';
+          batchSpinner.classList.add('hidden');
+
+          setTimeout(() => window.location.reload(), 3000);
+        });
+
+        batchBtn._hasHandler = true;
+      }
+
+      // Delete buttons
+      const deleteButtons = document.querySelectorAll('.delete-album-btn');
+      deleteButtons.forEach(btn => {
+        if (btn._hasHandler) return;
+        
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const albumId = btn.dataset.albumId;
+          const albumRow = btn.closest('div[class*="flex"][class*="items-center"]');
+          const albumTitle = albumRow ? albumRow.querySelector('h3')?.textContent : 'Unknown';
+          
+          if (!confirm(`Delete album "${albumTitle}" and all its photos?`)) return;
+
+          btn.disabled = true;
+          const originalText = btn.textContent;
+          btn.classList.add('opacity-50');
+          btn.textContent = 'Deleting...';
+
+          try {
+            const response = await fetch('/api/gallery/delete-album', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ albumId })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              const albumRow = btn.closest('div[class*="flex"][class*="items-center"]');
+              if (albumRow) {
+                albumRow.style.opacity = '0.3';
+                albumRow.style.textDecoration = 'line-through';
+              }
+              btn.textContent = 'Deleted';
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              throw new Error(result.error || 'Failed to delete album');
+            }
+          } catch (err) {
+            alert(`Error: ${err.message}`);
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            btn.textContent = originalText;
+          }
+        });
+        
+        btn._hasHandler = true;
+      });
+
+      // Drag and drop
+      const albumItems = document.querySelectorAll('.album-item');
+      
+      albumItems.forEach(item => {
+        if (item._dragInitialized) return;
+        
+        item.addEventListener('dragstart', (e) => {
+          draggedElement = item;
+          item.style.opacity = '0.5';
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        item.addEventListener('dragend', (e) => {
+          draggedElement = null;
+          item.style.opacity = '1';
+          albumItems.forEach(el => el.classList.remove('border-blue-400', 'border-2'));
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (item !== draggedElement) {
+            item.classList.add('border-blue-400', 'border-2');
+          }
+        });
+
+        item.addEventListener('dragleave', (e) => {
+          item.classList.remove('border-blue-400', 'border-2');
+        });
+
+        item.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          if (draggedElement && draggedElement !== item) {
+            const albumsList = document.getElementById('albums-list');
+            const items = Array.from(albumsList.querySelectorAll('.album-item'));
+            const draggedIndex = items.indexOf(draggedElement);
+            const targetIndex = items.indexOf(item);
+
+            if (draggedIndex > targetIndex) {
+              item.parentNode.insertBefore(draggedElement, item);
+            } else {
+              item.parentNode.insertBefore(draggedElement, item.nextSibling);
+            }
+
+            const newOrder = Array.from(albumsList.querySelectorAll('.album-item'))
+              .map(el => el.dataset.albumId);
+
+            try {
+              const response = await fetch('/api/gallery/reorder-albums', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ albumIds: newOrder })
+              });
+
+              const result = await response.json();
+              if (!result.success) {
+                throw new Error(result.error || 'Failed to save order');
+              }
+            } catch (err) {
+              alert(`Error saving order: ${err.message}`);
+              window.location.reload();
+            }
+          }
+          item.classList.remove('border-blue-400', 'border-2');
+        });
+
+        item._dragInitialized = true;
+      });
+    }
+
+    initializePortal();
+    document.addEventListener('astro:page-load', initializePortal);
+  </script>
+</Layout>

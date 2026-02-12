@@ -8,6 +8,7 @@ export interface Album {
   photo_count: number;
   created_at: string;
   updated_at: string;
+  display_order?: number;
 }
 
 export interface Photo {
@@ -27,7 +28,20 @@ export async function getAlbums() {
     console.error('Error fetching albums:', error);
     return [];
   }
-  return data as Album[];
+  
+  // Sort by display_order if it exists and is set
+  const albums = data as Album[];
+  return albums.sort((a, b) => {
+    // If both have display_order, use it
+    if (a.display_order != null && b.display_order != null) {
+      return a.display_order - b.display_order;
+    }
+    // If only one has it, that one comes first
+    if (a.display_order != null) return -1;
+    if (b.display_order != null) return 1;
+    // Otherwise keep the database title sort order
+    return 0;
+  });
 }
 
 export async function getAlbumById(albumId: string) {
@@ -55,4 +69,16 @@ export async function getPhotosByAlbumId(albumId: string) {
     return [];
   }
   return data as Photo[];
+}
+
+export async function getTotalPhotoCount() {
+  const { data, error } = await supabase
+    .from('gallery_photos')
+    .select('*', { count: 'exact', head: true });
+  
+  if (error) {
+    console.error('Error counting photos:', error);
+    return 0;
+  }
+  return data?.length || 0;
 }

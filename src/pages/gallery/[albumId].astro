@@ -4,6 +4,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getUserFromSession, isEmailApproved, isUserAdmin } from '../../lib/auth';
 import { getAlbumById, getPhotosByAlbumId } from '../../lib/gallery';
+import 'glightbox/dist/css/glightbox.css';
 
 const { albumId } = Astro.params;
 
@@ -65,57 +66,170 @@ function getDisplayTitle(title: string) {
     </nav>
 
     <!-- Header -->
-    <div class="mb-12">
-      {album.cover_image_url && (
-        <div class="w-full h-64 md:h-96 rounded-3xl overflow-hidden mb-8 shadow-lg">
-          <img 
-            src={`${album.cover_image_url}=w1600`} 
-            alt={getDisplayTitle(album.title)}
-            class="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">{getDisplayTitle(album.title)}</h1>
-      <p class="text-gray-600">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">{getDisplayTitle(album.title)}</h1>
+      <p class="text-sm text-gray-600">
         {photos.length} photos • {getDisplayDate(album.title, album.created_at)}
       </p>
     </div>
 
-    <!-- Photo Grid -->
-    <div class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
-      {photos.map((photo) => (
-        <div class="break-inside-avoid rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 bg-gray-100 min-h-[100px]">
-          <a 
-            href={`${photo.image_url}=w2048`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            class="block group relative"
-          >
-            <img 
-              src={`${photo.image_url}=w800`} 
-              alt="Family moment"
-              class="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-          </a>
-        </div>
-      ))}
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="flex justify-center items-center py-20">
+      <div class="relative w-12 h-12">
+        <div class="absolute inset-0 rounded-full border-2 border-gray-200"></div>
+        <div class="absolute inset-0 rounded-full border-2 border-transparent border-t-gray-900 animate-spin"></div>
+      </div>
     </div>
 
-    <!-- Back to Top / Navigation -->
-    <div class="mt-16 text-center">
-      <a 
-        href="/gallery" 
-        class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-colors"
-      >
-        Back to All Albums
-      </a>
+    <!-- Photo Grid -->
+    <div 
+      id="photo-grid" 
+      class="relative w-full overflow-hidden"
+    >
+      {photos.map((photo) => {
+        const encodedUrl = encodeURIComponent(photo.image_url);
+        return (
+          <a 
+            href={`/api/gallery/image?url=${encodedUrl}&w=1000`} 
+            class="photo-item glightbox absolute transition-all duration-300 hover:scale-[1.02] hover:z-10"
+            data-gallery="gallery1"
+          >
+            <img 
+              src={`/api/gallery/image?url=${encodedUrl}&w=800`} 
+              alt="Family moment"
+              class="w-full h-full object-cover rounded-xl shadow-sm hover:shadow-md transition-shadow"
+              loading="lazy"
+            />
+          </a>
+        );
+      })}
     </div>
   </div>
 </Layout>
 
+<script>
+  import justifiedLayout from 'justified-layout';
+  import GLightbox from 'glightbox';
+
+  async function initGallery() {
+    const container = document.getElementById('photo-grid');
+    if (!container) return;
+
+    const items = Array.from(container.querySelectorAll('.photo-item')) as HTMLElement[];
+    if (items.length === 0) return;
+
+    // Load images to get natural dimensions
+    const imgData = await Promise.all(items.map(item => {
+      const img = item.querySelector('img');
+      return new Promise<{width: number, height: number}>(resolve => {
+        if (!img) return resolve({width: 300, height: 200});
+        if (img.complete) {
+          resolve({width: img.naturalWidth || 300, height: img.naturalHeight || 200});
+        } else {
+          img.onload = () => resolve({width: img.naturalWidth || 300, height: img.naturalHeight || 200});
+          img.onerror = () => resolve({width: 300, height: 200});
+        }
+      });
+    }));
+
+    // Calculate layout
+    const layout = justifiedLayout(imgData, {
+      containerWidth: container.clientWidth,
+      targetRowHeight: 280,
+      boxSpacing: 12,
+      containerPadding: 0
+    });
+
+    // Apply layout
+    container.style.height = `${layout.containerHeight}px`;
+    items.forEach((item, i) => {
+      const box = layout.boxes[i];
+      if (!box) return;
+      item.style.position = 'absolute';
+      item.style.top = `${box.top}px`;
+      item.style.left = `${box.left}px`;
+      item.style.width = `${box.width}px`;
+      item.style.height = `${box.height}px`;
+      item.style.display = 'block';
+    });
+
+    // Hide spinner after layout is applied
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+      spinner.style.display = 'none';
+    }
+
+    // Init Lightbox
+    const lightbox = GLightbox({
+      selector: '.glightbox',
+      loop: true,
+      openEffect: 'zoom',
+      closeEffect: 'fade',
+      width: '90vw',
+      height: '90vh',
+    });
+  }
+
+  // Handle page load and Astro view transitions
+  initGallery();
+  document.addEventListener('astro:after-swap', initGallery);
+  
+  // Re-layout on window resize
+  let resizeTimeout: any;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(initGallery, 250);
+  });
+</script>
+
 <style>
+  /* Force lightbox to fit in viewport */
+  :global(.glightbox-container) {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  :global(.gslide) {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  :global(.gslide-image) {
+    width: auto !important;
+    height: auto !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  :global(.gslide-image img) {
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: scale-down !important;
+  }
+
+  :global(.glightbox-image) {
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: scale-down !important;
+  }
+
   /* Optional: Smooth fade-in for images */
   img {
     animation: fadeIn 0.5s ease-in-out;

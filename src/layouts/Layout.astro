@@ -1,5 +1,6 @@
 ---
-import { SESSION_COOKIE } from '../lib/auth';
+import { ClientRouter } from 'astro:transitions';
+import { SESSION_COOKIE, getUserFromSession } from '../lib/auth';
 
 interface Props {
   title: string;
@@ -7,7 +8,17 @@ interface Props {
 }
 
 const { title, description = "Benicja's Family Gallery & Recipes" } = Astro.props;
-const hasSession = Astro.cookies.has(SESSION_COOKIE);
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+const user = sessionId ? await getUserFromSession(sessionId) : null;
+
+// Determine if user is admin
+let isAdmin = false;
+if (sessionId) {
+  const { isUserAdmin } = await import('../lib/auth');
+  isAdmin = await isUserAdmin(sessionId);
+}
+
+const currentPath = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -17,31 +28,165 @@ const hasSession = Astro.cookies.has(SESSION_COOKIE);
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <ClientRouter />
     <title>{title}</title>
+    <style is:global>
+      html {
+        scrollbar-gutter: stable;
+      }
+
+      * {
+        -webkit-tap-highlight-color: transparent !important;
+        -webkit-touch-callout: none;
+      }
+      
+      button:focus, button:active {
+        outline: none !important;
+        box-shadow: none !important;
+      }
+
+      /* Optional: focus ring fix */
+      :focus-visible {
+        outline: none !important;
+      }
+
+      /* Snappier Transitions */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 200ms !important;
+      }
+
+      /* Custom minimalist scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #e5e7eb;
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #d1d5db;
+      }
+    </style>
+
+    <script is:inline>
+      document.addEventListener('astro:before-preparation', () => {
+        const progress = document.getElementById('nav-progress');
+        if (progress) {
+          progress.style.transitionDuration = '0ms';
+          progress.style.width = '0%';
+          progress.style.opacity = '1';
+          
+          // Force reflow
+          progress.offsetHeight;
+          
+          // Slide to 90% almost all the way over 10 seconds (slow drift)
+          progress.style.transitionDuration = '10s';
+          progress.style.transitionTimingFunction = 'cubic-bezier(0, 0.5, 0.5, 1)';
+          progress.style.width = '90%';
+        }
+      });
+
+      document.addEventListener('astro:after-preparation', () => {
+        const progress = document.getElementById('nav-progress');
+        if (progress) {
+          // Snap the last bit quickly
+          progress.style.transitionDuration = '300ms';
+          progress.style.width = '100%';
+        }
+      });
+
+      document.addEventListener('astro:page-load', () => {
+        const progress = document.getElementById('nav-progress');
+        if (progress) {
+          progress.style.transitionDuration = '300ms';
+          progress.style.opacity = '0';
+          setTimeout(() => {
+            progress.style.width = '0';
+          }, 300);
+        }
+      });
+    </script>
   </head>
-  <body class="bg-gray-50 min-h-screen">
-    <header class="bg-white shadow-sm border-b">
-      <nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
+  <body class="bg-white min-h-screen font-sans antialiased text-gray-900">
+    <!-- Progress Bar -->
+    <div id="nav-progress" class="fixed top-0 left-0 w-0 h-[2px] bg-gray-900 z-[100] transition-all opacity-0 pointer-events-none"></div>
+
+    <header class="bg-white border-b border-gray-100">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-20">
           <div class="flex items-center">
-            <a href="/" class="text-xl font-semibold text-gray-900 hover:text-primary-600 transition-colors">
+            <a href="/" class="text-2xl font-serif font-bold text-gray-900 tracking-tighter hover:opacity-70 transition-opacity">
               Benicja's Kitchen
             </a>
           </div>
-          <div class="flex space-x-8">
-            <a href="/" class="text-gray-700 hover:text-primary-600 transition-colors">
+          <div class="flex items-center space-x-12">
+            <a href="/" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath === '/' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Home
             </a>
-            <a href="/recipes" class="text-gray-700 hover:text-primary-600 transition-colors">
+            <a href="/recipes" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/recipes') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Recipes
             </a>
-            <a href="/gallery" class="text-gray-700 hover:text-primary-600 transition-colors">
+            <a href="/gallery" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/gallery') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Gallery
             </a>
-            {hasSession && (
-              <a href="/auth/logout" class="text-red-600 hover:text-red-700 font-medium transition-colors">
-                Logout
+            {isAdmin && (
+              <a href="/portal" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
+                Admin
+              </a>
+            )}
+            
+            {user ? (
+              <div class="relative group">
+                <button 
+                  class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors focus:outline-none"
+                  aria-label="User menu"
+                >
+                  {user.user_avatar ? (
+                    <img src={user.user_avatar} alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                  ) : (
+                    <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+                
+                <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                  <div class="px-4 py-2 border-b border-gray-50 mb-1">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signed in as</p>
+                    <p class="text-xs font-medium text-gray-900 truncate">{user.user_name || user.user_email}</p>
+                  </div>
+                  <a 
+                    href="/auth/logout" 
+                    class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    Logout
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <a 
+                href={`/auth/login?next=${currentPath}`}
+                class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors"
+                title="Login with Google"
+              >
+                <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
               </a>
             )}
           </div>
@@ -50,16 +195,10 @@ const hasSession = Astro.cookies.has(SESSION_COOKIE);
     </header>
     
     <main>
+      <main transition:animate="fade">
       <slot />
     </main>
-    
-    <footer class="bg-gray-900 text-white mt-16">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="text-center">
-          <p class="text-gray-400">© 2026 Benicja's Kitchen. Made with ❤️ for family.</p>
-        </div>
-      </div>
-    </footer>
+    </main>
     
     <script is:inline>
       // Debug: Log when script runs

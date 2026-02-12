@@ -23,14 +23,10 @@ collections:
       - { label: "Prep Time (minutes)", name: "prep_time", widget: "number", value_type: "int", min: 0 }
       - { label: "Cook Time (minutes)", name: "cook_time", widget: "number", value_type: "int", min: 0 }
       - { label: "Servings", name: "servings", widget: "number", value_type: "int", min: 1 }
-      - label: "Difficulty"
-        name: "difficulty"
-        widget: "select"
-        options: ["Easy", "Medium", "Hard"]
       - label: "Category"
         name: "category"
         widget: "select"
-        options: ["Breakfast", "Lunch", "Dinner", "Dessert", "Snack", "Appetizer"]
+        options: ["Breakfast", "Dinner", "Dessert"]
       - label: "Ingredients"
         name: "ingredients"
         widget: "list"
@@ -42,12 +38,6 @@ collections:
         widget: "list"
         fields:
           - { label: "Step", name: "step", widget: "text" }
-      - label: "Tags"
-        name: "tags"
-        widget: "select"
-        multiple: true
-        required: false
-        options: ["Vegetarian", "Vegan", "Gluten-Free", "Dairy-Free", "Low-Carb", "Quick", "Make-Ahead", "Holiday"]
       - { label: "Notes", name: "notes", widget: "text", required: false }
       - { label: "Publish Date", name: "publishDate", widget: "datetime", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", default: false, required: false }

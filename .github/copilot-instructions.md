@@ -56,7 +56,8 @@ src/
 
 ## Content Management
 - **Recipes:** Managed through Git and markdown files
-- **Recipe Schema:** Includes title, description, ingredients, instructions, timing, difficulty, tags
+- **Recipe Schema:** Includes title, description, ingredients, instructions, timing
+
 - **Manual Addition:** Create `.md` files in `src/content/recipes/` with proper frontmatter
 
 ## Next Development Steps

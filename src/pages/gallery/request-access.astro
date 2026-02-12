@@ -10,31 +10,26 @@ const user = sessionId ? await getUserFromSession(sessionId) : null;
 
 // Only allow access to this page if we have a session (signed in via Google)
 if (!user) {
-  return Astro.redirect('/auth/login');
+  return Astro.redirect(`/auth/login?next=${Astro.url.pathname}`);
 }
 
 const email = user.user_email;
 ---
 
-<Layout title="Request Gallery Access" description="Request access to the family photo gallery">
-  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div class="text-center mb-8">
-      <div class="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      </div>
-      <h1 class="text-3xl font-bold text-gray-900 mb-3">Request Gallery Access</h1>
-      <p class="text-lg text-gray-600">
-        This gallery is private. Submit your request and we'll get back to you soon.
+<Layout title="Request Access" description="Request access to the family photo gallery">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="text-center mb-16">
+      <h1 class="text-5xl font-serif font-bold text-gray-900 mb-6">Access Request</h1>
+      <p class="text-xl text-gray-500 font-light leading-relaxed">
+        Our gallery is a private space for family memories. Please provide your details to request access.
       </p>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border p-8">
-      <form id="accessRequestForm" class="space-y-6">
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-            Email Address (Verification from Google)
+    <div class="bg-white border border-gray-100 rounded-sm shadow-2xl p-10 md:p-16">
+      <form id="accessRequestForm" class="space-y-10">
+        <div class="space-y-4">
+          <label for="email" class="text-xs font-bold uppercase tracking-widest text-gray-400">
+            Verified Email
           </label>
           <input
             type="email"
@@ -43,92 +38,73 @@ const email = user.user_email;
             required
             readonly
             value={email}
-            class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-medium"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none font-serif text-2xl opacity-50 cursor-not-allowed"
           />
-          <p class="mt-2 text-xs text-gray-500">
-            This request will be sent for your verified Google account.
-          </p>
         </div>
 
-        <div>
-          <label for="fullName" class="block text-sm font-medium text-gray-700 mb-2">
-            Full Name *
+        <div class="space-y-4">
+          <label for="fullName" class="text-xs font-bold uppercase tracking-widest text-gray-400">
+            Full Name
           </label>
           <input
             type="text"
             id="fullName"
             name="fullName"
             required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="John Smith"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-serif text-2xl placeholder:text-gray-100"
+            placeholder="Your Name"
           />
         </div>
 
-        <div>
-          <label for="message" class="block text-sm font-medium text-gray-700 mb-2">
-            Message (Optional)
+        <div class="space-y-4">
+          <label for="message" class="text-xs font-bold uppercase tracking-widest text-gray-400">
+            Message
           </label>
           <textarea
             id="message"
             name="message"
-            rows="4"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            placeholder="Tell us how you're related to the family or why you'd like access..."
+            rows="3"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-light text-lg placeholder:text-gray-100 resize-none"
+            placeholder="Tell us who you are..."
           ></textarea>
         </div>
 
-        <div class="flex items-start">
-          <div class="flex items-center h-5">
-            <input
-              id="privacy"
-              name="privacy"
-              type="checkbox"
-              required
-              class="w-4 h-4 border border-gray-300 rounded text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          <label for="privacy" class="ml-3 text-sm text-gray-600">
-            I understand that access is restricted to family members and authorized individuals only *
+        <div class="flex items-start gap-4">
+          <input
+            id="privacy"
+            name="privacy"
+            type="checkbox"
+            required
+            class="mt-1.5 w-5 h-5 border-gray-200 rounded text-gray-900 focus:ring-gray-900"
+          />
+          <label for="privacy" class="text-sm text-gray-500 font-light leading-relaxed">
+            I understand that access is restricted to family members and authorized individuals only.
           </label>
         </div>
 
         <button
           type="submit"
-          class="w-full py-3 px-6 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors focus:ring-4 focus:ring-primary-200"
+          class="w-full py-6 px-10 bg-gray-900 text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-all rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-1"
         >
           Submit Request
         </button>
       </form>
 
-      <div id="successMessage" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-        <div class="flex items-start gap-3">
-          <svg class="w-6 h-6 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <h3 class="font-semibold text-green-900 mb-1">Request Submitted!</h3>
-            <p class="text-sm text-green-800">
-              We've received your access request. You'll receive an email once it's been reviewed.
-            </p>
-          </div>
-        </div>
+      <div id="successMessage" class="hidden mt-12 text-center p-8 bg-gray-50 rounded-sm">
+        <h3 class="text-2xl font-serif text-gray-900 mb-4">Request Sent</h3>
+        <p class="text-gray-500 font-light leading-relaxed">
+          We've received your application. You'll hear from us via email once it's been reviewed.
+        </p>
       </div>
-
-      <div id="errorMessage" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <div class="flex items-start gap-3">
-          <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <h3 class="font-semibold text-red-900 mb-1">Error</h3>
-            <p class="text-sm text-red-800" id="errorText"></p>
-          </div>
-        </div>
+      
+      <div id="errorMessage" class="hidden mt-12 p-8 bg-red-50 rounded-sm">
+        <h3 class="text-xl font-serif text-red-900 mb-2">Error</h3>
+        <p class="text-red-800/80 text-sm" id="errorText"></p>
       </div>
     </div>
 
-    <div class="text-center mt-8">
-      <a href="/gallery" class="text-primary-600 hover:text-primary-700 font-medium">
+    <div class="text-center mt-12">
+      <a href="/gallery" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors">
         ← Back to Gallery
       </a>
     </div>

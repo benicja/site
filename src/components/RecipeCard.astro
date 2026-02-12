@@ -3,96 +3,215 @@ import type { CollectionEntry } from 'astro:content';
 
 interface Props {
   recipe: CollectionEntry<'recipes'>;
+  user?: any;
+  isHearted?: boolean;
+  heartCount?: number;
 }
 
-const { recipe } = Astro.props;
+const { recipe, user, isHearted = false, heartCount = 0 } = Astro.props;
 const { data, slug } = recipe;
 
 // Calculate total time
 const totalTime = data.prep_time + data.cook_time;
-
-// Get difficulty color
-const difficultyColors = {
-  Easy: 'bg-green-100 text-green-800',
-  Medium: 'bg-yellow-100 text-yellow-800',
-  Hard: 'bg-red-100 text-red-800'
-};
 ---
 
-<article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow group">
+<style>
+  .heart-button {
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
+  }
+  .heart-button:focus, .heart-button:active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+</style>
+
+<article class="group relative bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-2xl transition-all duration-700 ease-out flex flex-col h-full">
   <!-- Recipe Image -->
-  {data.featured_image && (
-    <div class="aspect-w-16 aspect-h-9 bg-gray-200">
+  <div class="aspect-[16/10] overflow-hidden bg-gray-100 relative">
+    {data.featured_image ? (
       <img 
         src={data.featured_image} 
         alt={data.title}
-        class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+        class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
         loading="lazy"
       />
+    ) : (
+      <div class="w-full h-full flex items-center justify-center text-gray-300">
+        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+    )}
+    
+    <!-- Category Overlay -->
+    <div class="absolute top-4 left-4 z-20">
+      <a 
+        href={`/recipes?category=${data.category}`}
+        class="category-tag px-3 py-1 bg-white/90 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-gray-900 rounded-full shadow-sm hover:bg-white transition-colors cursor-pointer select-none"
+        data-category={data.category}
+      >
+        {data.category}
+      </a>
     </div>
-  )}
+  </div>
   
   <!-- Recipe Content -->
-  <div class="p-6">
-    <!-- Title & Description -->
-    <div class="mb-4">
-      <h3 class="text-xl font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">
-        <a href={`/recipes/${slug}`} class="stretched-link">
+  <div class="p-8 flex flex-col flex-1">
+    <div class="flex-1">
+      <h3 class="text-2xl font-serif text-gray-900 mb-3 group-hover:text-primary-600 transition-colors duration-300">
+        <a href={`/recipes/${slug}`} class="after:absolute after:inset-0">
           {data.title}
         </a>
       </h3>
-      <p class="text-gray-600 text-sm line-clamp-2">
+      <p class="text-gray-500 text-sm font-light leading-relaxed line-clamp-2 mb-6">
         {data.description}
       </p>
     </div>
     
     <!-- Recipe Meta -->
-    <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
-      <div class="flex items-center space-x-4">
-        <!-- Time -->
-        <div class="flex items-center">
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div class="pt-6 border-t border-gray-50 flex items-center justify-center -ml-4">
+      <div class="flex items-center gap-6 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {totalTime} min
+          <span class="text-sm font-light lowercase text-gray-600">{totalTime} min</span>
         </div>
-        
-        <!-- Servings -->
-        <div class="flex items-center">
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        <div class="flex items-center gap-2">
+          <svg 
+            class={`meta-heart-icon w-4 h-4 transition-colors duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'text-gray-400'}`} 
+            fill={isHearted ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
-          {data.servings} servings
+          <span class="text-sm font-light lowercase text-gray-600 heart-count">{heartCount}</span>
         </div>
       </div>
-      
-      <!-- Difficulty Badge -->
-      <span class={`px-2 py-1 rounded-full text-xs font-medium ${difficultyColors[data.difficulty]}`}>
-        {data.difficulty}
-      </span>
     </div>
-    
-    <!-- Category -->
-    <div class="mb-3">
-      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-        {data.category}
-      </span>
-    </div>
-    
-    <!-- Tags -->
-    {data.tags && data.tags.length > 0 && (
-      <div class="flex flex-wrap gap-1">
-        {data.tags.slice(0, 3).map(tag => (
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-            {tag}
-          </span>
-        ))}
-        {data.tags.length > 3 && (
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">
-            +{data.tags.length - 3} more
-          </span>
-        )}
+  </div>
+
+  <!-- Top Right Heart Icon -->
+  <div class="absolute top-4 right-4 z-[30]">
+    {user ? (
+      <button 
+        type="button"
+        class="heart-button transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
+        data-slug={slug}
+        data-hearted={isHearted.toString()}
+      >
+        <svg 
+          class={`top-heart-icon w-6 h-6 drop-shadow-md transition-all duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'fill-none stroke-white text-white'}`} 
+          viewBox="0 0 24 24"
+          fill={isHearted ? 'currentColor' : 'none'}
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      </button>
+    ) : (
+      <div class="text-white drop-shadow-md opacity-80 pointer-events-none p-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
       </div>
     )}
   </div>
 </article>
+
+<script>
+  function initHearts() {
+    const buttons = document.querySelectorAll('.heart-button');
+    
+    buttons.forEach(button => {
+      if ((button as any)._heartInited) return;
+      (button as any)._heartInited = true;
+
+      button.addEventListener('click', async (e) => {
+        // Stop propagation to prevent card link from triggering
+        e.preventDefault();
+        e.stopPropagation();
+
+        const slug = button.getAttribute('data-slug');
+        if (!slug) return;
+
+        const wasHearted = button.getAttribute('data-hearted') === 'true';
+        const nowHearted = !wasHearted;
+        
+        const card = button.closest('article');
+        const countSpan = card?.querySelector('.heart-count');
+        const topSvg = button.querySelector('.top-heart-icon');
+        const metaSvg = card?.querySelector('.meta-heart-icon');
+
+        // Update Icons & Count
+        const updateUI = (isH: boolean) => {
+          button.setAttribute('data-hearted', isH.toString());
+          // Also update the parent item for filtering
+          if (card?.parentElement?.classList.contains('recipe-item')) {
+            card.parentElement.setAttribute('data-hearted', isH.toString());
+          }
+          
+          if (isH) {
+            // Top Heart
+            topSvg?.classList.remove('fill-none', 'stroke-white', 'text-white');
+            topSvg?.classList.add('fill-red-500', 'stroke-red-500', 'text-red-500');
+            topSvg?.setAttribute('fill', 'currentColor');
+            // Meta Heart
+            metaSvg?.classList.remove('text-gray-400');
+            metaSvg?.classList.add('fill-red-500', 'stroke-red-500', 'text-red-500');
+            metaSvg?.setAttribute('fill', 'currentColor');
+          } else {
+            // Top Heart
+            topSvg?.classList.add('fill-none', 'stroke-white', 'text-white');
+            topSvg?.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
+            topSvg?.setAttribute('fill', 'none');
+            // Meta Heart
+            metaSvg?.classList.add('text-gray-400');
+            metaSvg?.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
+            metaSvg?.setAttribute('fill', 'none');
+          }
+        };
+
+        const updateCount = (increase: boolean) => {
+          if (countSpan) {
+            const currentCount = parseInt(countSpan.textContent || '0');
+            countSpan.textContent = (increase ? currentCount + 1 : Math.max(0, currentCount - 1)).toString();
+          }
+        };
+
+        // 1. Optimistic Update
+        updateUI(nowHearted);
+        updateCount(nowHearted);
+
+        // 2. Background Request
+        try {
+          const res = await fetch('/api/recipes/heart', {
+            method: 'POST',
+            body: JSON.stringify({ slug }),
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || 'Failed to heart');
+          }
+        } catch (err) {
+          console.error('Hearting failed, reverting:', err);
+          // Revert UI on failure
+          updateUI(wasHearted);
+          updateCount(wasHearted);
+        }
+      });
+    });
+  }
+
+  // Initial init
+  initHearts();
+
+  // Re-init for Astro view transitions
+  document.addEventListener('astro:after-swap', initHearts);
+  document.addEventListener('astro:page-load', initHearts);
+</script>

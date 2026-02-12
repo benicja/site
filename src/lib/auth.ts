@@ -85,7 +85,9 @@ export async function createUserSession(
   email: string,
   googleId: string,
   accessToken: string,
-  refreshToken?: string
+  refreshToken?: string,
+  userName?: string,
+  userAvatar?: string
 ): Promise<string> {
   const { supabaseAdmin } = await import('./supabase');
   
@@ -96,6 +98,8 @@ export async function createUserSession(
       google_id: googleId,
       access_token: accessToken,
       refresh_token: refreshToken,
+      user_name: userName,
+      user_avatar: userAvatar,
       last_login: new Date().toISOString()
     }, {
       onConflict: 'user_email'

@@ -166,6 +166,8 @@ CREATE TABLE user_sessions (
   google_id TEXT,
   access_token TEXT,
   refresh_token TEXT,
+  user_name TEXT,
+  user_avatar TEXT,
   last_login TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

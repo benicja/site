@@ -1,11 +1,10 @@
 ---
 title: "5-Minute Avocado Toast"
 description: "A healthy, delicious breakfast or snack that's ready in minutes. Perfect avocado on crispy sourdough with a sprinkle of everything seasoning."
-featured_image: "/images/avocado-toast.jpg"
+featured_image: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&q=80&w=1000"
 prep_time: 5
 cook_time: 2
 servings: 2
-difficulty: "Easy"
 category: "Breakfast"
 ingredients:
   - item: "Sourdough bread slices"
@@ -26,7 +25,6 @@ instructions:
   - step: "Spread the mashed avocado evenly on the toasted bread."
   - step: "Sprinkle with everything bagel seasoning and red pepper flakes if using."
   - step: "Serve immediately while toast is still crispy."
-tags: ["Quick", "Vegetarian", "Vegan"]
 publishDate: 2026-02-11T08:00:00Z
 draft: false
 ---

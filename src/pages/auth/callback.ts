@@ -39,14 +39,22 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       return new Response('Failed to fetch user info', { status: 500 });
     }
     
-    const userInfo: { email: string; id: string; verified_email: boolean } = await userInfoResponse.json();
+    const userInfo: { 
+      email: string; 
+      id: string; 
+      verified_email: boolean;
+      name?: string;
+      picture?: string;
+    } = await userInfoResponse.json();
     
     // Create or update session for the user immediately
     const sessionId = await createUserSession(
       userInfo.email,
       userInfo.id,
       tokens.accessToken(),
-      tokens.hasRefreshToken() ? tokens.refreshToken() : undefined
+      tokens.hasRefreshToken() ? tokens.refreshToken() : undefined,
+      userInfo.name,
+      userInfo.picture
     );
     
     // Set session cookie
@@ -87,17 +95,21 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     // Check if email is approved
     const approved = await isEmailApproved(userInfo.email);
     
+    // Get target redirect
+    const targetRedirect = cookies.get('auth_redirect')?.value || '/gallery';
+
     // Clean up OAuth cookies
     cookies.delete('oauth_state', { path: '/' });
     cookies.delete('oauth_code_verifier', { path: '/' });
+    cookies.delete('auth_redirect', { path: '/' });
 
     if (!approved) {
       // Redirect to access request page (user now has a session so they can view it)
       return redirect('/gallery/request-access');
     }
     
-    // Redirect to gallery main page
-    return redirect('/gallery');
+    // Redirect to target or gallery
+    return redirect(targetRedirect);
     
   } catch (error) {
     console.error('OAuth error Details:', error);
