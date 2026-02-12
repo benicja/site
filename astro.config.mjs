@@ -8,5 +8,5 @@ export default defineConfig({
   integrations: [tailwind(), react()],
   output: 'static',
   adapter: netlify(),
-  site: 'https://benicja.netlify.app'
+  site: 'https://benicja.com'
 });
