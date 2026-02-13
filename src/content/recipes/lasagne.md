@@ -13,7 +13,6 @@ instructions:
   - step: do this
 tags:
   - Vegan
-notes: THIS IS MATT'S
 publishDate: 2026-02-12T16:10:00.000+00:00
 draft: false
 ---

@@ -11,7 +11,6 @@ ingredients:
 instructions:
   - step: eat
   - step: yum
-notes: hi
 publishDate: 2026-02-11T15:50:00.000+00:00
 draft: false
 ---

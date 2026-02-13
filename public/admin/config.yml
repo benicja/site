@@ -37,7 +37,6 @@ collections:
         widget: "list"
         fields:
           - { label: "Step", name: "step", widget: "text" }
-      - { label: "Notes", name: "notes", widget: "text", required: false }
       - { label: "Publish Date", name: "publishDate", widget: "datetime", required: false }
       - { label: "Draft", name: "draft", widget: "boolean", default: false, required: false }
       - { label: "Body", name: "body", widget: "markdown", required: false }

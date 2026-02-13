@@ -71,20 +71,11 @@ const totalTime = data.prep_time + data.cook_time;
               <p class="meta-value">{totalTime} min</p>
             </div>
           </div>
-          {data.notes && (
-            <div class="notes-card">
-              <h3>Cook's Notes</h3>
-              <div class="notes-body">{data.notes}</div>
-            </div>
-          )}
         </aside>
       </section>
 
       <section class="recipe-description">
         <p class="description-text">{data.description}</p>
-        <div class="story-body">
-          <Content />
-        </div>
       </section>
 
       <section class="recipe-body">
@@ -126,7 +117,7 @@ const totalTime = data.prep_time + data.cook_time;
   .recipe-shell {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 36px 20px 80px;
+    padding: 20px 20px 80px;
     display: flex;
     flex-direction: column;
     gap: 28px;
@@ -356,50 +347,9 @@ const totalTime = data.prep_time + data.cook_time;
     line-height: 1.7;
   }
 
-  .notes-card {
-    margin-top: 28px;
-    padding: 18px 20px;
-    border-radius: 18px;
-    background: #f8fafc;
-    border-left: 3px solid #0f172a;
-  }
-
-  .notes-card h3 {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3em;
-    color: #0f172a;
-    margin-bottom: 10px;
-  }
-
-  .notes-body {
-    color: #475569;
-    font-size: 0.95rem;
-    line-height: 1.6;
-  }
-
-  .story-body {
-    margin-top: 28px;
-    padding-top: 24px;
-    border-top: 1px solid #f1f5f9;
-    color: #334155;
-  }
-
-  .story-body :global(p) {
-    margin: 0 0 16px;
-    line-height: 1.7;
-  }
-
-  .story-body :global(h2),
-  .story-body :global(h3) {
-    font-family: "Playfair Display", serif;
-    color: #0f172a;
-    margin: 24px 0 12px;
-  }
-
   @media (min-width: 1024px) {
     .recipe-shell {
-      padding: 48px 32px 96px;
+      padding: 32px 32px 96px;
     }
 
     .recipe-media {

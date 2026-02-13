@@ -16,7 +16,6 @@ const recipeCollection = defineCollection({
     instructions: z.array(z.object({
       step: z.string()
     })),
-    notes: z.string().optional(),
     publishDate: z.date().optional(),
     draft: z.boolean().optional()
   })

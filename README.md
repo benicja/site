@@ -67,7 +67,7 @@ instructions:
   - step: \"Step description\"
 ---
 
-Additional recipe notes in markdown format.
+Recipe content in markdown format.
 ```
 
 ## 🏗️ Project Structure
