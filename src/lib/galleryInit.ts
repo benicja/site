@@ -3,7 +3,9 @@ import { Fancybox } from '@fancyapps/ui';
 
 export async function initGallery() {
   const container = document.getElementById('photo-grid');
-  if (!container) return;
+  if (!container) {
+    return;
+  }
 
   const items = Array.from(container.querySelectorAll('.photo-item'));
   const spinner = document.getElementById('loading-spinner');

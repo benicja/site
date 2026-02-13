@@ -4,6 +4,81 @@ import { supabaseAdmin } from '../../../lib/supabase';
 
 export const prerender = false;
 
+type MediaType = 'image' | 'video';
+
+const GOOGLE_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  'Referer': 'https://photos.google.com/'
+};
+
+async function probeMediaType(baseUrl: string): Promise<MediaType> {
+  const videoProbeUrl = `${baseUrl}=dv`;
+
+  try {
+    const headResponse = await fetch(videoProbeUrl, {
+      method: 'HEAD',
+      headers: GOOGLE_HEADERS,
+      redirect: 'follow'
+    });
+
+    if (headResponse.ok) {
+      const contentType = headResponse.headers.get('content-type') || '';
+      if (contentType.startsWith('video/')) return 'video';
+      if (contentType.startsWith('image/')) return 'image';
+    }
+  } catch (error) {
+    console.warn('Video HEAD probe failed:', error);
+  }
+
+  // Fallback: try a tiny range request to infer type
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const getResponse = await fetch(videoProbeUrl, {
+      method: 'GET',
+      headers: {
+        ...GOOGLE_HEADERS,
+        Range: 'bytes=0-0'
+      },
+      redirect: 'follow',
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+    getResponse.body?.cancel();
+
+    if (getResponse.ok || getResponse.status === 206) {
+      const contentType = getResponse.headers.get('content-type') || '';
+      if (contentType.startsWith('video/')) return 'video';
+    }
+  } catch (error) {
+    console.warn('Video GET probe failed:', error);
+  }
+
+  return 'image';
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const currentIndex = nextIndex++;
+      if (currentIndex >= items.length) break;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   const sessionId = cookies.get(SESSION_COOKIE)?.value;
 
@@ -23,9 +98,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      },
+      headers: GOOGLE_HEADERS,
       redirect: 'follow'
     });
     
@@ -137,12 +210,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (albumError) throw albumError;
 
+    const mediaTypes = await mapWithConcurrency(uniqueBaseUrls, 5, async (photoUrl) => {
+      return await probeMediaType(photoUrl);
+    });
+
+    const videoCount = mediaTypes.filter((type) => type === 'video').length;
+    console.log(`Detected ${videoCount} videos out of ${uniqueBaseUrls.length} items.`);
+
     const photoRows = uniqueBaseUrls.map((photoUrl, index) => {
       const photoId = `${albumUrlId}_photo_${index}`;
       return {
         google_photo_id: photoId,
         album_id: albumUrlId,
-        image_url: photoUrl
+        image_url: photoUrl,
+        media_type: mediaTypes[index]
       };
     });
 
