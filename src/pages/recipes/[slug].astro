@@ -27,7 +27,7 @@ const { Content } = await recipe.render();
 const totalTime = data.prep_time + data.cook_time;
 ---
 
-<Layout title={data.title} description={data.description}>
+<Layout title={data.title} description={data.description} user={user}>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
     <!-- Back Button -->
     <a href="/recipes" class="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors mb-12">

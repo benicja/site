@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { supabaseAdmin } from '../../lib/supabase';
 
 // Get user session to force their official email
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
@@ -13,10 +14,22 @@ if (!user) {
   return Astro.redirect(`/auth/login?next=${Astro.url.pathname}`);
 }
 
+const { data: accessRequest } = await supabaseAdmin
+  .from('access_requests')
+  .select('status')
+  .eq('email', user.user_email)
+  .order('requested_at', { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+if (accessRequest?.status === 'pending') {
+  return Astro.redirect('/gallery');
+}
+
 const email = user.user_email;
 ---
 
-<Layout title="Request Access" description="Request access to the family photo gallery">
+<Layout title="Request Access" description="Request access to the family photo gallery" user={user}>
   <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
     <div class="text-center mb-16">
       <h1 class="text-5xl font-serif font-bold text-gray-900 mb-6">Request Access</h1>
@@ -38,7 +51,7 @@ const email = user.user_email;
             required
             readonly
             value={email}
-            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none font-serif text-2xl opacity-50 cursor-not-allowed"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none font-serif text-2xl cursor-not-allowed"
           />
         </div>
 
@@ -51,7 +64,7 @@ const email = user.user_email;
             id="fullName"
             name="fullName"
             required
-            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-serif text-2xl placeholder:text-gray-100"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-serif text-2xl placeholder:text-gray-300"
             placeholder="Your Name"
           />
         </div>
@@ -64,29 +77,21 @@ const email = user.user_email;
             id="message"
             name="message"
             rows="3"
-            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-light text-lg placeholder:text-gray-100 resize-none"
+            class="w-full px-0 py-4 bg-transparent border-b border-gray-100 text-gray-900 focus:outline-none focus:border-gray-900 transition-colors font-serif text-2xl placeholder:text-gray-300 resize-none"
             placeholder="Tell us who you are..."
           ></textarea>
         </div>
 
-        <div class="flex items-start gap-4">
-          <input
-            id="privacy"
-            name="privacy"
-            type="checkbox"
-            required
-            class="mt-1.5 w-5 h-5 border-gray-200 rounded text-gray-900 focus:ring-gray-900"
-          />
-          <label for="privacy" class="text-sm text-gray-500 font-light leading-relaxed">
-            I understand that access is restricted to family members and authorized individuals only.
-          </label>
-        </div>
-
         <button
           type="submit"
-          class="w-full py-6 px-10 bg-gray-900 text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-all rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-1"
+          class="w-full py-6 px-10 bg-gray-900 text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 transition-all rounded-full shadow-xl hover:shadow-2xl hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+          data-submit-btn
         >
-          Submit Request
+          <span data-submit-text>Submit Request</span>
+          <span data-submit-spinner class="ml-3 inline-flex items-center gap-2 hidden">
+            <span class="inline-block w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin"></span>
+            Sending
+          </span>
         </button>
       </form>
 
@@ -104,8 +109,8 @@ const email = user.user_email;
     </div>
 
     <div class="text-center mt-12">
-      <a href="/gallery" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors">
-        ← Back to Gallery
+      <a href="/recipes" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors">
+        ← Back to Recipes
       </a>
     </div>
   </div>
@@ -116,9 +121,18 @@ const email = user.user_email;
   const successMessage = document.getElementById('successMessage');
   const errorMessage = document.getElementById('errorMessage');
   const errorText = document.getElementById('errorText');
+  const submitButton = document.querySelector('[data-submit-btn]');
+  const submitText = document.querySelector('[data-submit-text]');
+  const submitSpinner = document.querySelector('[data-submit-spinner]');
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (submitButton instanceof HTMLButtonElement) {
+      submitButton.disabled = true;
+    }
+    submitText?.classList.add('hidden');
+    submitSpinner?.classList.remove('hidden');
     
     const formData = new FormData(form);
     const data = {
@@ -148,6 +162,12 @@ const email = user.user_email;
     } catch (error) {
       errorMessage?.classList.remove('hidden');
       if (errorText) errorText.textContent = 'Network error. Please try again later.';
+    } finally {
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = false;
+      }
+      submitText?.classList.remove('hidden');
+      submitSpinner?.classList.add('hidden');
     }
   });
 </script>

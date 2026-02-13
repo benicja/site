@@ -1,21 +1,35 @@
 ---
 import { ClientRouter } from 'astro:transitions';
-import { SESSION_COOKIE, getUserFromSession } from '../lib/auth';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../lib/auth';
 
 interface Props {
   title: string;
   description?: string;
+  user?: any;
+  isAdmin?: boolean;
+  resolveAuth?: boolean;
 }
 
-const { title, description = "Benicja's Family Gallery & Recipes" } = Astro.props;
-const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
-const user = sessionId ? await getUserFromSession(sessionId) : null;
+const {
+  title,
+  description = "Benicja's Family Gallery & Recipes",
+  user: userProp,
+  isAdmin: isAdminProp,
+  resolveAuth = true
+} = Astro.props;
 
-// Determine if user is admin
-let isAdmin = false;
-if (sessionId) {
-  const { isUserAdmin } = await import('../lib/auth');
-  isAdmin = await isUserAdmin(sessionId);
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+
+let user = userProp ?? null;
+let isAdmin = typeof isAdminProp === 'boolean' ? isAdminProp : false;
+
+if (resolveAuth && !user && sessionId) {
+  user = await getUserFromSession(sessionId);
+}
+
+if (resolveAuth && user && typeof isAdminProp !== 'boolean') {
+  const approvedUser = await getApprovedUser(user.user_email);
+  isAdmin = approvedUser?.role === 'admin';
 }
 
 const currentPath = Astro.url.pathname;
@@ -131,63 +145,114 @@ const currentPath = Astro.url.pathname;
             </a>
           </div>
           <div class="flex items-center space-x-12">
-            <a href="/" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath === '/' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
-              Home
-            </a>
             <a href="/recipes" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/recipes') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Recipes
             </a>
             <a href="/gallery" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/gallery') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Gallery
             </a>
-            {isAdmin && (
-              <a href="/portal" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
+            {resolveAuth ? (
+              isAdmin && (
+                <a href="/portal" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
+                  Admin
+                </a>
+              )
+            ) : (
+              <a 
+                href="/portal" 
+                class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'} hidden`}
+                data-auth-admin
+              >
                 Admin
               </a>
             )}
             
-            {user ? (
-              <div class="relative group">
-                <button 
-                  class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors focus:outline-none"
-                  aria-label="User menu"
+            {resolveAuth ? (
+              user ? (
+                <div class="relative group">
+                  <button 
+                    class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors focus:outline-none"
+                    aria-label="User menu"
+                  >
+                    {user.user_avatar ? (
+                      <img src={user.user_avatar} alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                    ) : (
+                      <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                  
+                  <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                    <div class="px-4 py-2 border-b border-gray-50 mb-1">
+                      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signed in as</p>
+                      <p class="text-xs font-medium text-gray-900 truncate">{user.user_name || user.user_email}</p>
+                    </div>
+                    <a 
+                      href="/auth/logout" 
+                      class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      Logout
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <a 
+                  href={`/auth/login?next=${currentPath}`}
+                  class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 transition-colors"
+                  title="Login with Google"
                 >
-                  {user.user_avatar ? (
-                    <img src={user.user_avatar} alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
-                  ) : (
-                    <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                  <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                </a>
+              )
+            ) : (
+              <div class="relative" data-auth-shell>
+                <a 
+                  href={`/auth/login?next=${currentPath}`}
+                  class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 transition-colors"
+                  title="Login with Google"
+                  data-auth-out
+                >
+                  <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                </a>
+
+                <div class="relative group hidden" data-auth-in>
+                  <button 
+                    class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors focus:outline-none"
+                    aria-label="User menu"
+                  >
+                    <img data-auth-avatar class="w-full h-full object-cover hidden" referrerpolicy="no-referrer" alt="Profile" />
+                    <div data-auth-avatar-fallback class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
-                  )}
-                </button>
-                
-                <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
-                  <div class="px-4 py-2 border-b border-gray-50 mb-1">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signed in as</p>
-                    <p class="text-xs font-medium text-gray-900 truncate">{user.user_name || user.user_email}</p>
+                  </button>
+                  
+                  <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                    <div class="px-4 py-2 border-b border-gray-50 mb-1">
+                      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signed in as</p>
+                      <p data-auth-name class="text-xs font-medium text-gray-900 truncate"></p>
+                    </div>
+                    <a 
+                      href="/auth/logout" 
+                      class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      Logout
+                    </a>
                   </div>
-                  <a 
-                    href="/auth/logout" 
-                    class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    Logout
-                  </a>
                 </div>
               </div>
-            ) : (
-              <a 
-                href={`/auth/login?next=${currentPath}`}
-                class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors"
-                title="Login with Google"
-              >
-                <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-              </a>
             )}
           </div>
         </div>
@@ -245,5 +310,62 @@ const currentPath = Astro.url.pathname;
         initNetlifyIdentity();
       }
     </script>
+
+    {!resolveAuth && (
+      <script is:inline>
+        async function hydrateAuthShell() {
+          try {
+            const response = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const shell = document.querySelector('[data-auth-shell]');
+            if (!shell) return;
+
+            const loggedOut = shell.querySelector('[data-auth-out]');
+            const loggedIn = shell.querySelector('[data-auth-in]');
+            const adminLink = document.querySelector('[data-auth-admin]');
+
+            if (!data.authenticated) {
+              loggedIn?.classList.add('hidden');
+              loggedOut?.classList.remove('hidden');
+              adminLink?.classList.add('hidden');
+              return;
+            }
+
+            loggedOut?.classList.add('hidden');
+            loggedIn?.classList.remove('hidden');
+
+            if (data.isAdmin) {
+              adminLink?.classList.remove('hidden');
+            }
+
+            const nameEl = shell.querySelector('[data-auth-name]');
+            if (nameEl) {
+              nameEl.textContent = data.user?.name || data.user?.email || '';
+            }
+
+            const avatarImg = shell.querySelector('[data-auth-avatar]');
+            const avatarFallback = shell.querySelector('[data-auth-avatar-fallback]');
+            if (avatarImg && data.user?.avatar) {
+              avatarImg.src = data.user.avatar;
+              avatarImg.classList.remove('hidden');
+              avatarFallback?.classList.add('hidden');
+            }
+          } catch (error) {
+            console.error('Auth hydrate failed', error);
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', hydrateAuthShell);
+        } else {
+          hydrateAuthShell();
+        }
+
+        document.addEventListener('astro:page-load', hydrateAuthShell);
+        document.addEventListener('astro:after-swap', hydrateAuthShell);
+      </script>
+    )}
   </body>
 </html>

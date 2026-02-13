@@ -1,12 +1,25 @@
 import type { APIRoute } from 'astro';
+import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { sendAdminAccessRequestEmail } from '../../lib/email';
 import { supabaseAdmin } from '../../lib/supabase';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const { email, fullName, message } = await request.json();
-    
+    const sessionId = cookies.get(SESSION_COOKIE)?.value;
+    const user = sessionId ? await getUserFromSession(sessionId) : null;
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { fullName, message } = await request.json();
+    const email = user.user_email;
+
     if (!email || !fullName) {
       return new Response(JSON.stringify({ error: 'Email and name are required' }), {
         status: 400,
@@ -48,15 +61,19 @@ export const POST: APIRoute = async ({ request }) => {
       .insert({
         email,
         full_name: fullName,
-        message,
+        message: message || '',
         request_token: requestToken,
         status: 'pending'
       });
     
     if (error) throw error;
     
-    // TODO: Send email notification to admin
-    // For now, just return success
+    await sendAdminAccessRequestEmail({
+      email,
+      fullName,
+      message: message || '',
+      requestToken
+    });
     
     return new Response(JSON.stringify({ 
       success: true,

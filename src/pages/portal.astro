@@ -3,12 +3,14 @@ export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import RecipeCMSCard from '../components/RecipeCMSCard.astro';
-import { SESSION_COOKIE, getUserFromSession, isUserAdmin } from '../lib/auth';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../lib/auth';
 import { getAlbums } from '../lib/gallery';
+import { supabaseAdmin, type AccessRequest, type ApprovedUser } from '../lib/supabase';
 
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
 const user = sessionId ? await getUserFromSession(sessionId) : null;
-const isAdmin = sessionId ? await isUserAdmin(sessionId) : false;
+const approvedUser = user ? await getApprovedUser(user.user_email) : null;
+const isAdmin = approvedUser?.role === 'admin';
 
 // Strict admin check
 if (!isAdmin) {
@@ -16,13 +18,144 @@ if (!isAdmin) {
 }
 
 const albums = await getAlbums();
+const { data: accessRequests } = await supabaseAdmin
+  .from('access_requests')
+  .select('*')
+  .eq('status', 'pending')
+  .order('requested_at', { ascending: false });
+
+const pendingRequests = (accessRequests as AccessRequest[]) || [];
+const { data: approvedUsers } = await supabaseAdmin
+  .from('approved_users')
+  .select('*')
+  .order('approved_at', { ascending: false });
+
+const activeUsers = (approvedUsers as ApprovedUser[]) || [];
 ---
 
-<Layout title="Site Administration" description="Manage gallery and site configuration">
+<Layout title="Site Administration" description="Manage gallery and site configuration" user={user} isAdmin={isAdmin}>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
     <div class="space-y-12">
       <!-- Recipe Management -->
       <RecipeCMSCard />
+
+      <!-- Access Requests -->
+      <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12 shadow-sm">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A4 4 0 0110 16h4a4 4 0 014 4v1H6v-1a4 4 0 01-.879-2.196z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xl font-serif text-gray-900">Access Requests</h2>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pending Approval</p>
+          </div>
+        </div>
+
+        {pendingRequests.length > 0 ? (
+          <div class="space-y-4" id="access-requests">
+            {pendingRequests.map((request) => (
+              <div
+                class="request-row border border-gray-100 rounded-2xl p-6 flex flex-col gap-4"
+                data-request-id={request.id}
+              >
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Email</p>
+                    <p class="text-sm font-semibold text-gray-900 mt-1">{request.email}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Name</p>
+                    <p class="text-sm text-gray-700 mt-1">{request.full_name || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Requested</p>
+                    <p class="text-sm text-gray-500 mt-1">{new Date(request.requested_at).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Message</p>
+                  <p class="text-sm text-gray-600 mt-2 whitespace-pre-line">
+                    {request.message || 'No message provided.'}
+                  </p>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                  <button
+                    class="request-approve-btn px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-colors"
+                    data-request-id={request.id}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="request-reject-btn px-6 py-2 bg-white text-gray-500 text-xs font-bold uppercase tracking-widest rounded-full border border-gray-200 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                    data-request-id={request.id}
+                  >
+                    Reject
+                  </button>
+                  <span class="request-status text-xs text-gray-400 self-center"></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="text-sm text-gray-500">No pending requests.</div>
+        )}
+      </section>
+
+      <!-- Approved Users -->
+      <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12 shadow-sm">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a4 4 0 00-4-4h-1" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20H4v-2a4 4 0 014-4h1" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 12a4 4 0 100-8 4 4 0 000 8z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-xl font-serif text-gray-900">Approved Users</h2>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Active Access</p>
+          </div>
+        </div>
+
+        {activeUsers.length > 0 ? (
+          <div class="space-y-3">
+            {activeUsers.map((approved) => (
+              <div
+                class="approved-row border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                data-approved-id={approved.id}
+              >
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Email</p>
+                  <p class="text-sm font-semibold text-gray-900 mt-1">{approved.email}</p>
+                  <div class="mt-2 flex items-center gap-2">
+                    <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+                      {approved.role === 'admin' ? 'Admin' : 'User'}
+                    </span>
+                    <span class="text-xs text-gray-400">Approved {new Date(approved.approved_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button
+                    class="revoke-user-btn px-5 py-2 bg-white text-red-600 text-xs font-bold uppercase tracking-widest rounded-full border border-red-100 hover:border-red-300 hover:text-red-700 transition-colors"
+                    data-approved-id={approved.id}
+                    data-approved-email={approved.email}
+                  >
+                    Revoke
+                  </button>
+                  <span class="revoke-status text-xs text-gray-400"></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="text-sm text-gray-500">No approved users yet.</div>
+        )}
+      </section>
 
       <!-- Sync Column -->
       <section class="bg-gray-50 border border-gray-100 rounded-3xl p-8 md:p-12">
@@ -40,26 +173,6 @@ const albums = await getAlbums();
 
         <div class="space-y-4 mb-6">
           <div>
-            <label class="text-xs font-bold text-gray-600 uppercase tracking-widest block mb-2">Single Album</label>
-            <div class="flex flex-col sm:flex-row gap-4">
-              <input 
-                type="url" 
-                id="sync-url" 
-                placeholder="Paste Google Photos Share Link..." 
-                class="flex-1 px-6 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-gray-200 transition-all font-light"
-              />
-              <button 
-                id="sync-btn"
-                class="px-10 py-4 bg-gray-900 text-white rounded-xl transition-all font-bold text-sm uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <span id="btn-text">Add</span>
-                <div id="btn-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              </button>
-            </div>
-            <div id="sync-status" class="mt-6 text-xs font-mono uppercase tracking-tight hidden"></div>
-          </div>
-
-          <div class="border-t border-gray-200 pt-6">
             <label class="text-xs font-bold text-gray-600 uppercase tracking-widest block mb-2">Batch Add Multiple</label>
             <textarea 
               id="batch-urls" 
@@ -69,9 +182,9 @@ const albums = await getAlbums();
             ></textarea>
             <button 
               id="batch-btn"
-              class="mt-4 px-10 py-4 bg-gray-700 text-white rounded-xl transition-all font-bold text-sm uppercase tracking-widest hover:bg-gray-600 disabled:opacity-50 flex items-center justify-center gap-2"
+              class="mt-4 px-10 py-4 bg-gray-900 text-white rounded-xl transition-all font-bold text-sm uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <span id="batch-btn-text">Add All</span>
+              <span id="batch-btn-text">Add</span>
               <div id="batch-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             </button>
             <div id="batch-status" class="mt-6 text-xs font-mono uppercase tracking-tight hidden max-h-48 overflow-y-auto p-4 bg-white border border-gray-200 rounded-lg"></div>
@@ -121,72 +234,95 @@ const albums = await getAlbums();
     let draggedElement = null;
 
     function initializePortal() {
-      const syncBtn = document.getElementById('sync-btn');
-      const syncUrl = document.getElementById('sync-url');
-      const syncStatus = document.getElementById('sync-status');
-      const btnText = document.getElementById('btn-text');
-      const btnSpinner = document.getElementById('btn-spinner');
+      const revokeButtons = document.querySelectorAll('.revoke-user-btn');
+      revokeButtons.forEach((btn) => {
+        if (btn._hasHandler) return;
 
-      // Single album upload
-      if (syncBtn && syncUrl) {
-        if (syncBtn._hasHandler) return;
-        
-        syncBtn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async (e) => {
           e.preventDefault();
-          const url = syncUrl.value.trim();
-          if (!url) return;
+          const approvedId = btn.dataset.approvedId;
+          const approvedEmail = btn.dataset.approvedEmail || 'this user';
+          if (!approvedId) return;
 
-          syncStatus.classList.remove('hidden', 'text-red-500', 'text-green-500');
-          syncStatus.classList.add('text-gray-500');
-          syncStatus.textContent = 'Contacting server...';
-          syncBtn.disabled = true;
-          btnText.textContent = 'Adding...';
-          btnSpinner.classList.remove('hidden');
+          if (!confirm(`Revoke access for ${approvedEmail}?`)) return;
+
+          const row = btn.closest('.approved-row');
+          const status = row?.querySelector('.revoke-status');
+          if (status) status.textContent = 'Revoking...';
 
           try {
-            const response = await fetch('/api/gallery/sync-link', {
+            const response = await fetch('/api/admin/approved-users', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: url })
+              body: JSON.stringify({ id: approvedId })
             });
 
             const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to revoke access');
+            }
 
-            if (result.success) {
-              syncStatus.textContent = `Success: ${result.title} added (${result.count} photos)`;
-              syncStatus.classList.add('text-green-500');
-              syncStatus.classList.remove('hidden');
-              syncUrl.value = '';
-              setTimeout(() => window.location.reload(), 2000);
-            } else {
-              throw new Error(result.error || 'Failed to add album');
+            if (status) status.textContent = 'Revoked';
+            if (row) {
+              row.style.opacity = '0.4';
+              setTimeout(() => row.remove(), 600);
             }
           } catch (err) {
-            const errMsg = err.message;
-            const fullErr = typeof err === 'string' ? err : JSON.stringify(err, null, 2);
-            syncStatus.textContent = `Error: ${errMsg}`;
-            syncStatus.classList.add('text-red-500');
-            syncStatus.classList.remove('hidden');
-          } finally {
-            syncBtn.disabled = false;
-            btnText.textContent = 'Add';
-            btnSpinner.classList.add('hidden');
+            if (status) status.textContent = 'Error revoking';
+            alert(err.message || 'Failed to revoke access');
           }
         });
-        
-        syncBtn._hasHandler = true;
-      }
 
-      // Batch upload
+        btn._hasHandler = true;
+      });
+
+      const requestButtons = document.querySelectorAll('.request-approve-btn, .request-reject-btn');
+      requestButtons.forEach((btn) => {
+        if (btn._hasHandler) return;
+
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const action = btn.classList.contains('request-approve-btn') ? 'approve' : 'deny';
+          const requestId = btn.dataset.requestId;
+          if (!requestId) return;
+
+          const row = btn.closest('.request-row');
+          const status = row?.querySelector('.request-status');
+          if (status) status.textContent = 'Updating...';
+
+          try {
+            const response = await fetch('/api/admin/requests', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: requestId, action })
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Failed to update request');
+            }
+
+            if (status) status.textContent = action === 'approve' ? 'Approved' : 'Rejected';
+            if (row) {
+              row.style.opacity = '0.4';
+              setTimeout(() => row.remove(), 600);
+            }
+          } catch (err) {
+            if (status) status.textContent = 'Error updating request';
+            alert(err.message || 'Failed to update request');
+          }
+        });
+
+        btn._hasHandler = true;
+      });
+
       const batchBtn = document.getElementById('batch-btn');
       const batchUrls = document.getElementById('batch-urls');
       const batchStatus = document.getElementById('batch-status');
       const batchBtnText = document.getElementById('batch-btn-text');
       const batchSpinner = document.getElementById('batch-spinner');
 
-      if (batchBtn && batchUrls) {
-        if (batchBtn._hasHandler) return;
-
+      if (batchBtn && batchUrls && !batchBtn._hasHandler) {
         batchBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           const urls = batchUrls.value
@@ -203,14 +339,12 @@ const albums = await getAlbums();
           batchStatus.classList.add('text-gray-700');
           batchStatus.innerHTML = `Processing ${urls.length} albums...`;
           batchBtn.disabled = true;
-          batchBtnText.textContent = `Processing...`;
+          batchBtnText.textContent = 'Processing...';
           batchSpinner.classList.remove('hidden');
 
           let successCount = 0;
           let failureCount = 0;
           const results = [];
-          
-          // Use adaptive delay: longer for batches with many items
           const baseDelay = urls.length > 10 ? 2000 : urls.length > 5 ? 1500 : 1000;
 
           for (let i = 0; i < urls.length; i++) {
@@ -228,7 +362,6 @@ const albums = await getAlbums();
               const result = await response.json();
 
               if (response.status === 429) {
-                // Rate limited - show helpful message and stop
                 failureCount++;
                 results.push(`<span class="text-orange-600">⚠ Rate limited at position ${i + 1}. Wait 5+ minutes and retry remaining albums.</span>`);
                 batchStatus.classList.add('text-orange-600');
@@ -245,7 +378,6 @@ const albums = await getAlbums();
               results.push(`<span class="text-red-600">✗ Error: ${err.message}</span>`);
             }
 
-            // Delay before next request (adaptive)
             if (i < urls.length - 1) {
               await new Promise(resolve => setTimeout(resolve, baseDelay));
             }
@@ -254,7 +386,7 @@ const albums = await getAlbums();
           batchStatus.classList.add(failureCount > 0 ? 'text-orange-600' : 'text-green-600');
           batchStatus.innerHTML = results.join('<br>') + `<br><br><strong>Completed: ${successCount}/${urls.length} albums added</strong>`;
           batchBtn.disabled = false;
-          batchBtnText.textContent = 'Add All';
+          batchBtnText.textContent = 'Add';
           batchSpinner.classList.add('hidden');
 
           setTimeout(() => window.location.reload(), 3000);
@@ -263,17 +395,16 @@ const albums = await getAlbums();
         batchBtn._hasHandler = true;
       }
 
-      // Delete buttons
       const deleteButtons = document.querySelectorAll('.delete-album-btn');
       deleteButtons.forEach(btn => {
         if (btn._hasHandler) return;
-        
+
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           const albumId = btn.dataset.albumId;
           const albumRow = btn.closest('div[class*="flex"][class*="items-center"]');
           const albumTitle = albumRow ? albumRow.querySelector('h3')?.textContent : 'Unknown';
-          
+
           if (!confirm(`Delete album "${albumTitle}" and all its photos?`)) return;
 
           btn.disabled = true;
@@ -308,23 +439,21 @@ const albums = await getAlbums();
             btn.textContent = originalText;
           }
         });
-        
+
         btn._hasHandler = true;
       });
 
-      // Drag and drop
       const albumItems = document.querySelectorAll('.album-item');
-      
       albumItems.forEach(item => {
         if (item._dragInitialized) return;
-        
+
         item.addEventListener('dragstart', (e) => {
           draggedElement = item;
           item.style.opacity = '0.5';
           e.dataTransfer.effectAllowed = 'move';
         });
 
-        item.addEventListener('dragend', (e) => {
+        item.addEventListener('dragend', () => {
           draggedElement = null;
           item.style.opacity = '1';
           albumItems.forEach(el => el.classList.remove('border-blue-400', 'border-2'));
@@ -338,7 +467,7 @@ const albums = await getAlbums();
           }
         });
 
-        item.addEventListener('dragleave', (e) => {
+        item.addEventListener('dragleave', () => {
           item.classList.remove('border-blue-400', 'border-2');
         });
 

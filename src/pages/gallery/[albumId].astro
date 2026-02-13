@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import { SESSION_COOKIE, getUserFromSession, isEmailApproved, isUserAdmin } from '../../lib/auth';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { getAlbumById, getPhotosByAlbumId } from '../../lib/gallery';
 import 'glightbox/dist/css/glightbox.css';
 
@@ -11,8 +11,9 @@ const { albumId } = Astro.params;
 // Check authentication
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
 const user = sessionId ? await getUserFromSession(sessionId) : null;
-const isApproved = user ? await isEmailApproved(user.user_email) : false;
-const isAdmin = sessionId ? await isUserAdmin(sessionId) : false;
+const approvedUser = user ? await getApprovedUser(user.user_email) : null;
+const isApproved = !!approvedUser;
+const isAdmin = approvedUser?.role === 'admin';
 
 if (!user || (!isApproved && !isAdmin)) {
   return Astro.redirect('/gallery');
@@ -46,13 +47,18 @@ function getDisplayTitle(title: string) {
 }
 ---
 
-<Layout title={`${getDisplayTitle(album.title)} - Gallery`} description={`View photos from ${getDisplayTitle(album.title)}`}>
+<Layout
+  title={`${getDisplayTitle(album.title)} - Gallery`}
+  description={`View photos from ${getDisplayTitle(album.title)}`}
+  user={user}
+  isAdmin={isAdmin}
+>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Breadcrumbs -->
     <nav class="flex mb-8 text-sm font-medium text-gray-500" aria-label="Breadcrumb">
       <ol class="inline-flex items-center space-x-1 md:space-x-3">
         <li class="inline-flex items-center">
-          <a href="/gallery" class="hover:text-primary-600 transition-colors">Gallery</a>
+          <a href="/gallery" class="hover:text-primary-600 transition-colors" data-astro-prefetch>Gallery</a>
         </li>
         <li>
           <div class="flex items-center">

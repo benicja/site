@@ -20,6 +20,7 @@ export const supabaseAdmin = supabaseServiceKey
 export interface ApprovedUser {
   id: string;
   email: string;
+  role: string | null;
   approved_by: string | null;
   approved_at: string;
   created_at: string;
