@@ -102,14 +102,17 @@ function getDisplayTitle(title: string) {
         const isVideo = photo.media_type === 'video';
         const fullUrl = isVideo ? `${photo.image_url}=dv` : `/api/gallery/image?url=${encodedUrl}&w=1000`;
         const thumbUrl = `/api/gallery/image?url=${encodedUrl}&w=800`;
+        const videoData = isVideo
+          ? JSON.stringify({ source: [{ src: fullUrl, type: 'video/mp4' }], poster: thumbUrl })
+          : undefined;
 
         return (
           <a 
-            href={fullUrl}
+            href={isVideo ? thumbUrl : fullUrl}
             class={`photo-item absolute transition-all duration-300 hover:scale-[1.02] hover:z-10${isVideo ? ' is-video' : ''}`}
             data-fancybox="gallery"
-            data-type={isVideo ? 'video' : undefined}
-            data-src={isVideo ? fullUrl : undefined}
+            data-type={isVideo ? 'html5video' : undefined}
+            data-video={videoData}
           >
             <img 
               src={thumbUrl}
@@ -171,10 +174,6 @@ function getDisplayTitle(title: string) {
   }
 
   /* Video play button overlay on grid */
-  .photo-item.is-video {
-    position: relative !important;
-  }
-
   .photo-item.is-video::after {
     content: '';
     position: absolute;
