@@ -75,7 +75,7 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
         </div>
 
         <section>
-          <div id="recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
+          <div id="recipes-grid" class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-8 md:gap-y-8">
             {sortedRecipes.map(recipe => (
               <div 
                 class="recipe-item" 

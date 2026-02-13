@@ -35,6 +35,11 @@ if (resolveAuth && user && typeof isAdminProp !== 'boolean') {
 }
 
 const currentPath = Astro.url.pathname;
+
+if (resolveAuth) {
+  Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+  Astro.response.headers.set('Vary', 'Cookie');
+}
 ---
 
 <!doctype html>
@@ -140,13 +145,13 @@ const currentPath = Astro.url.pathname;
 
     <header class="bg-white border-b border-gray-100">
       <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-20">
+        <div class="flex justify-between items-center h-16 md:h-20">
           <div class="flex items-center">
-            <a href="/" class="text-2xl font-serif font-bold text-gray-900 tracking-tighter hover:opacity-70 transition-opacity">
+            <a href="/" class="text-xl md:text-2xl font-serif font-bold text-gray-900 tracking-tighter hover:opacity-70 transition-opacity">
               Benicja's Kitchen
             </a>
           </div>
-          <div class="flex items-center space-x-12">
+          <div class="hidden md:flex items-center space-x-12">
             <a href="/recipes" class={`text-[11px] font-bold uppercase tracking-[0.3em] transition-colors ${currentPath.startsWith('/recipes') ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>
               Recipes
             </a>
@@ -257,8 +262,122 @@ const currentPath = Astro.url.pathname;
               </div>
             )}
           </div>
+          <button
+            type="button"
+            class="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-100 text-gray-700 hover:border-gray-400 transition-colors relative z-[95]"
+            aria-label="Open menu"
+            aria-expanded="false"
+            aria-controls="mobile-nav"
+            data-nav-toggle
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" data-nav-icon="open">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" data-nav-icon="close">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       </nav>
+      <div id="mobile-nav" class="fixed inset-0 z-[90] hidden">
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" data-nav-close></div>
+        <div class="absolute right-0 top-0 h-full w-[82%] max-w-sm bg-white shadow-2xl p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-8">
+            <span class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400">Menu</span>
+          </div>
+
+          <div class="space-y-4">
+            <a href="/recipes" class={`block text-lg font-semibold ${currentPath.startsWith('/recipes') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}>
+              Recipes
+            </a>
+            <a href="/gallery" class={`block text-lg font-semibold ${currentPath.startsWith('/gallery') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}>
+              Gallery
+            </a>
+            {resolveAuth ? (
+              isAdmin && (
+                <a href="/portal" class={`block text-lg font-semibold ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}>
+                  Admin
+                </a>
+              )
+            ) : (
+              <a
+                href="/portal"
+                class={`block text-lg font-semibold ${currentPath.startsWith('/portal') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'} hidden`}
+                data-auth-admin
+              >
+                Admin
+              </a>
+            )}
+          </div>
+
+          <div class="mt-10 pt-6 border-t border-gray-100">
+            {resolveAuth ? (
+              user ? (
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-100">
+                      {user.user_avatar ? (
+                        <img src={user.user_avatar} alt="Profile" class="w-full h-full object-cover" referrerpolicy="no-referrer" />
+                      ) : (
+                        <div class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Signed in</p>
+                      <p class="text-sm font-medium text-gray-900 truncate max-w-[170px]">{user.user_name || user.user_email}</p>
+                    </div>
+                  </div>
+                  <a href="/auth/logout" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
+                    Logout
+                  </a>
+                </div>
+              ) : (
+                <a
+                  href={`/auth/login?next=${currentPath}`}
+                  class="inline-flex items-center justify-center w-full py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em]"
+                >
+                  Sign in
+                </a>
+              )
+            ) : (
+              <div class="relative" data-auth-shell>
+                <a
+                  href={`/auth/login?next=${currentPath}`}
+                  class="inline-flex items-center justify-center w-full py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em]"
+                  data-auth-out
+                >
+                  Sign in
+                </a>
+                <div class="hidden" data-auth-in>
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-100">
+                        <img data-auth-avatar class="w-full h-full object-cover hidden" referrerpolicy="no-referrer" alt="Profile" />
+                        <div data-auth-avatar-fallback class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Signed in</p>
+                        <p data-auth-name class="text-sm font-medium text-gray-900 truncate max-w-[170px]"></p>
+                      </div>
+                    </div>
+                    <a href="/auth/logout" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
+                      Logout
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </header>
     
     <main>
@@ -369,5 +488,50 @@ const currentPath = Astro.url.pathname;
         document.addEventListener('astro:after-swap', hydrateAuthShell);
       </script>
     )}
+    <script is:inline>
+      (function initMobileNav() {
+        const panel = document.getElementById('mobile-nav');
+        const toggle = document.querySelector('[data-nav-toggle]');
+        const openIcon = toggle?.querySelector('[data-nav-icon="open"]');
+        const closeIcon = toggle?.querySelector('[data-nav-icon="close"]');
+        const closeTriggers = document.querySelectorAll('[data-nav-close]');
+
+        if (!panel || !toggle) return;
+
+        const openMenu = () => {
+          panel.classList.remove('hidden');
+          document.body.classList.add('overflow-hidden');
+          toggle.setAttribute('aria-expanded', 'true');
+          openIcon?.classList.add('hidden');
+          closeIcon?.classList.remove('hidden');
+          toggle.setAttribute('aria-label', 'Close menu');
+        };
+
+        const closeMenu = () => {
+          panel.classList.add('hidden');
+          document.body.classList.remove('overflow-hidden');
+          toggle.setAttribute('aria-expanded', 'false');
+          openIcon?.classList.remove('hidden');
+          closeIcon?.classList.add('hidden');
+          toggle.setAttribute('aria-label', 'Open menu');
+        };
+
+        toggle.addEventListener('click', () => {
+          if (panel.classList.contains('hidden')) {
+            openMenu();
+          } else {
+            closeMenu();
+          }
+        });
+
+        closeTriggers.forEach((node) => {
+          node.addEventListener('click', closeMenu);
+        });
+
+        panel.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', closeMenu);
+        });
+      })();
+    </script>
   </body>
 </html>

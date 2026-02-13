@@ -60,7 +60,7 @@ const totalTime = data.prep_time + data.cook_time;
   <!-- Recipe Content -->
   <div class="p-8 flex flex-col flex-1">
     <div class="flex-1">
-      <h3 class="text-2xl font-serif text-gray-900 mb-3 group-hover:text-primary-600 transition-colors duration-300">
+      <h3 class="text-xl md:text-2xl font-serif font-medium text-gray-900 mb-3 group-hover:text-primary-600 transition-colors duration-300">
         <a href={`/recipes/${slug}`} class="after:absolute after:inset-0">
           {data.title}
         </a>
@@ -81,8 +81,8 @@ const totalTime = data.prep_time + data.cook_time;
         </div>
         <div class="flex items-center gap-2">
           <svg 
-            class={`meta-heart-icon w-6 h-6 transition-colors duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'text-gray-400'}`} 
-            fill={isHearted ? 'currentColor' : 'none'}
+            class="meta-heart-icon w-6 h-6 transition-colors duration-300 text-gray-400"
+            fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
@@ -95,7 +95,7 @@ const totalTime = data.prep_time + data.cook_time;
   </div>
 
   <!-- Top Right Heart Icon -->
-  <div class="absolute top-4 right-4 z-[30]">
+  <div class="absolute top-3 right-3 z-[30]">
     <button 
       type="button"
       class="heart-button transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
@@ -162,16 +162,16 @@ const totalTime = data.prep_time + data.cook_time;
             topSvg?.classList.remove('fill-none', 'stroke-white', 'text-white');
             topSvg?.classList.add('fill-red-500', 'stroke-red-500', 'text-red-500');
             topSvg?.setAttribute('fill', 'currentColor');
-            // Meta Heart
-            metaSvg?.classList.remove('text-gray-400');
-            metaSvg?.classList.add('fill-red-500', 'stroke-red-500', 'text-red-500');
-            metaSvg?.setAttribute('fill', 'currentColor');
+            // Meta Heart stays neutral
+            metaSvg?.classList.add('text-gray-400');
+            metaSvg?.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
+            metaSvg?.setAttribute('fill', 'none');
           } else {
             // Top Heart
             topSvg?.classList.add('fill-none', 'stroke-white', 'text-white');
             topSvg?.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
             topSvg?.setAttribute('fill', 'none');
-            // Meta Heart
+            // Meta Heart stays neutral
             metaSvg?.classList.add('text-gray-400');
             metaSvg?.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
             metaSvg?.setAttribute('fill', 'none');

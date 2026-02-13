@@ -14,6 +14,7 @@ let siteConfig = null;
 let albums: Album[] = [];
 let error = '';
 let accessRequestStatus: 'pending' | 'denied' | null = null;
+let needsApproval = false;
 
 Astro.response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
 
@@ -23,9 +24,10 @@ try {
   const approvedUser = user ? await getApprovedUser(user.user_email) : null;
   isApproved = !!approvedUser;
   isAdmin = approvedUser?.role === 'admin';
+  needsApproval = !!user && !isApproved && !isAdmin;
 
   // If user is authenticated but not approved, send them to request access
-  if (user && !isApproved && !isAdmin) {
+  if (needsApproval) {
     const { data: accessRequest } = await supabaseAdmin
       .from('access_requests')
       .select('status')
@@ -151,6 +153,22 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
           </p>
         </div>
       </div>
+    ) : needsApproval ? (
+      <!-- Request Access Fallback -->
+      <div class="text-center">
+        <div class="max-w-md mx-auto">
+          <h2 class="text-3xl font-serif mb-6">Request Access</h2>
+          <p class="text-gray-500 mb-8 leading-relaxed">
+            This gallery is private. Ask for access and we will review your request.
+          </p>
+          <a 
+            href="/gallery/request-access"
+            class="inline-flex items-center gap-3 px-10 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-sm font-bold tracking-widest uppercase shadow-xl hover:shadow-2xl hover:-translate-y-1"
+          >
+            Request access
+          </a>
+        </div>
+      </div>
     ) : (
       <!-- Gallery Content --> 
       <div class="space-y-6">
@@ -188,7 +206,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
 
         <div id="albums-view">
           {albums.length > 0 ? (
-            <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+            <div id="gallery-grid" class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
               {albums.map((album) => (
                 <a 
                   href={`/gallery/${album.google_album_id}`}
@@ -197,7 +215,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                 >
                   <div class="aspect-square overflow-hidden bg-gray-100 rounded-lg relative shadow-sm group-hover:shadow-2xl transition-all duration-700 ease-out">
                     <img 
-                      src={`${album.cover_image_url}=w1000-h1250-c`} 
+                      src={`/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=1000`} 
                       alt={album.title}
                       class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
                       loading="lazy"
@@ -213,7 +231,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                   <div class="mt-6">
                     <div class="flex items-start justify-between gap-4">
                       <div>
-                        <h3 class="text-xl font-serif text-gray-900 group-hover:text-primary-600 transition-colors duration-300">
+                        <h3 class="text-lg md:text-xl font-serif text-gray-900 group-hover:text-primary-600 transition-colors duration-300">
                           {getDisplayTitle(album.title)}
                         </h3>
                         <p class="text-xs uppercase tracking-[0.2em] text-gray-400 mt-2 font-bold">

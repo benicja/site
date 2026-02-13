@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { supabaseAdmin } from '../../lib/supabase';
 
 // Get user session to force their official email
@@ -12,6 +12,11 @@ const user = sessionId ? await getUserFromSession(sessionId) : null;
 // Only allow access to this page if we have a session (signed in via Google)
 if (!user) {
   return Astro.redirect(`/auth/login?next=${Astro.url.pathname}`);
+}
+
+const approvedUser = user ? await getApprovedUser(user.user_email) : null;
+if (approvedUser) {
+  return Astro.redirect('/gallery');
 }
 
 const { data: accessRequest } = await supabaseAdmin

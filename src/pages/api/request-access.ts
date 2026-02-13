@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { sendAdminAccessRequestEmail } from '../../lib/email';
 import { supabaseAdmin } from '../../lib/supabase';
 
@@ -20,6 +20,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { fullName, message } = await request.json();
     const email = user.user_email;
 
+    const approvedUser = await getApprovedUser(email);
+    if (approvedUser) {
+      return new Response(JSON.stringify({ 
+        error: 'Your access has already been approved. Try signing in.' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (!email || !fullName) {
       return new Response(JSON.stringify({ error: 'Email and name are required' }), {
         status: 400,
@@ -35,19 +45,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('access_requests')
       .select('id, status')
       .eq('email', email)
-      .single();
+      .order('requested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     
     if (existingRequest) {
       if (existingRequest.status === 'pending') {
         return new Response(JSON.stringify({ 
           error: 'You already have a pending request' 
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } else if (existingRequest.status === 'approved') {
-        return new Response(JSON.stringify({ 
-          error: 'Your access has already been approved. Try signing in.' 
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
