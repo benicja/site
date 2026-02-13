@@ -26,7 +26,7 @@ const totalTime = data.prep_time + data.cook_time;
   }
 </style>
 
-<article class="group relative bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-2xl transition-all duration-700 ease-out flex flex-col h-full">
+<article class="group relative bg-gray-50/80 border border-gray-200 rounded-xl overflow-hidden hover:shadow-2xl transition-all duration-700 ease-out flex flex-col h-full">
   <!-- Recipe Image -->
   <div class="aspect-[16/10] overflow-hidden bg-gray-100 relative">
     {data.featured_image ? (
@@ -65,23 +65,23 @@ const totalTime = data.prep_time + data.cook_time;
           {data.title}
         </a>
       </h3>
-      <p class="text-gray-500 text-sm font-light leading-relaxed line-clamp-2 mb-6">
+      <p class="text-gray-500 text-sm font-light leading-relaxed line-clamp-2 mb-3">
         {data.description}
       </p>
     </div>
     
     <!-- Recipe Meta -->
-    <div class="pt-6 border-t border-gray-50 flex items-center justify-center -ml-4">
+    <div class="pt-3 border-t border-gray-50 flex items-center justify-center -ml-4">
       <div class="flex items-center gap-6 text-[11px] font-bold uppercase tracking-widest text-gray-400">
         <div class="flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span class="text-sm font-light lowercase text-gray-600">{totalTime} min</span>
         </div>
         <div class="flex items-center gap-2">
           <svg 
-            class={`meta-heart-icon w-4 h-4 transition-colors duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'text-gray-400'}`} 
+            class={`meta-heart-icon w-6 h-6 transition-colors duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'text-gray-400'}`} 
             fill={isHearted ? 'currentColor' : 'none'}
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -96,29 +96,22 @@ const totalTime = data.prep_time + data.cook_time;
 
   <!-- Top Right Heart Icon -->
   <div class="absolute top-4 right-4 z-[30]">
-    {user ? (
-      <button 
-        type="button"
-        class="heart-button transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
-        data-slug={slug}
-        data-hearted={isHearted.toString()}
+    <button 
+      type="button"
+      class="heart-button transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
+      data-slug={slug}
+      data-hearted={isHearted.toString()}
+      data-user={user ? 'true' : 'false'}
+    >
+      <svg 
+        class={`top-heart-icon w-8 h-8 drop-shadow-md transition-all duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'fill-none stroke-white text-white'}`} 
+        viewBox="0 0 24 24"
+        fill={isHearted ? 'currentColor' : 'none'}
+        stroke="currentColor"
       >
-        <svg 
-          class={`top-heart-icon w-6 h-6 drop-shadow-md transition-all duration-300 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'fill-none stroke-white text-white'}`} 
-          viewBox="0 0 24 24"
-          fill={isHearted ? 'currentColor' : 'none'}
-          stroke="currentColor"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-        </svg>
-      </button>
-    ) : (
-      <div class="text-white drop-shadow-md opacity-80 pointer-events-none p-1">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-        </svg>
-      </div>
-    )}
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+    </button>
   </div>
 </article>
 
@@ -133,6 +126,16 @@ const totalTime = data.prep_time + data.cook_time;
       button.addEventListener('click', async (e) => {
         // Stop propagation to prevent card link from triggering
         e.preventDefault();
+        e.stopPropagation();
+        const isLoggedIn = button.getAttribute('data-user') === 'true';
+        
+        // If not logged in, redirect to Google sign-in
+        if (!isLoggedIn) {
+          const currentUrl = window.location.pathname + window.location.search;
+          window.location.href = `/auth/login?next=${encodeURIComponent(currentUrl)}`;
+          return;
+        }
+
         e.stopPropagation();
 
         const slug = button.getAttribute('data-slug');
