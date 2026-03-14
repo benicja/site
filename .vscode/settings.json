@@ -1,0 +1,13 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "CV\\.md$",
+        "cmd": "python src/build.py",
+        "runIn": "terminal",
+        "runningStatusMessage": "Building CV...",
+        "finishStatusMessage": "CV built"
+      }
+    ]
+  }
+}

@@ -89,6 +89,13 @@ def parse_cv(source: str) -> tuple[dict, str]:
             i += 1
             continue
 
+        # ── Manual page break ─────────────────────────────────
+        if line.strip() == "---pagebreak---":
+            flush_list()
+            html_parts.append('<div class="page-break"></div>')
+            i += 1
+            continue
+
         # ── ## Section heading ────────────────────────────────
         if line.startswith("## "):
             flush_list()
@@ -167,11 +174,11 @@ def parse_cv(source: str) -> tuple[dict, str]:
 def render_pdf(html_path: Path, pdf_path: Path, footer_name: str) -> None:
     footer_template = (
         '<div style="'
-        "font-family: 'Times New Roman', Times, serif;"
-        "font-size: 9pt;"
+        "font-family: Arial, Helvetica, sans-serif;"
+        "font-size: 10pt;"
         "width: 100%;"
         "text-align: right;"
-        "padding: 0 0.75in;"
+        "padding: 0 0.5in;"
         "box-sizing: border-box;"
         'color: #000;">'
         f"{footer_name}<br>"
@@ -188,10 +195,10 @@ def render_pdf(html_path: Path, pdf_path: Path, footer_name: str) -> None:
             path=str(pdf_path),
             format="Letter",
             margin={
-                "top": "0.75in",
-                "bottom": "0.9in",
-                "left": "0.75in",
-                "right": "0.75in",
+                "top": "0.6in",
+                "bottom": "0.75in",
+                "left": "0.5in",
+                "right": "0.5in",
             },
             display_header_footer=True,
             header_template="<div></div>",

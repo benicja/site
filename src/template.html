@@ -11,8 +11,8 @@
     }
 
     body {
-      font-family: 'Times New Roman', Times, serif;
-      font-size: 10.5pt;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 11pt;
       line-height: 1.25;
       color: #000;
     }
@@ -24,19 +24,19 @@
     }
 
     .cv-name {
-      font-size: 14pt;
+      font-size: 17pt;
       font-weight: bold;
       line-height: 1.5;
     }
 
     .cv-contact {
-      font-size: 10pt;
+      font-size: 11pt;
     }
 
     /* ── Section headings ────────────────────────────────────── */
     .section-heading {
       font-weight: bold;
-      font-size: 10.5pt;
+      font-size: 11pt;
       border-bottom: 1px solid #000;
       padding-bottom: 1pt;
       margin-top: 11pt;
@@ -57,11 +57,23 @@
     /* h3 row: bold entry (company or degree) */
     .h3-row {
       margin-top: 7pt;
+      break-after: avoid;
     }
 
     /* h4 row: italic job title */
     .h4-row {
       margin-top: 2pt;
+      break-after: avoid;
+    }
+
+    /* Section headings also shouldn't be orphaned */
+    .section-heading {
+      break-after: avoid;
+    }
+
+    /* Manual page break marker */
+    .page-break {
+      break-before: page;
     }
 
     /* Suppress extra top margin for first h3 directly after a section heading */

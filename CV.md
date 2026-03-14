@@ -1,5 +1,5 @@
 ---
-name: "Hannah Meibers, Ph.D. (She/Her/Hers)"
+name: "Hannah Meibers, Ph.D."
 phone: "(513) 490-7679"
 email: "hmeibers95@gmail.com"
 location: "Bay Area (Fremont, CA)"
