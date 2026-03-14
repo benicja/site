@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ name }}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 10.5pt;
+      line-height: 1.25;
+      color: #000;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .cv-header {
+      text-align: center;
+      margin-bottom: 8pt;
+    }
+
+    .cv-name {
+      font-size: 14pt;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    .cv-contact {
+      font-size: 10pt;
+    }
+
+    /* ── Section headings ────────────────────────────────────── */
+    .section-heading {
+      font-weight: bold;
+      font-size: 10.5pt;
+      border-bottom: 1px solid #000;
+      padding-bottom: 1pt;
+      margin-top: 11pt;
+      margin-bottom: 5pt;
+    }
+
+    /* ── Date rows (company, degree, job title) ──────────────── */
+    .date-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6pt;
+    }
+
+    .dr-left  { flex: 1; }
+    .dr-right { white-space: nowrap; font-weight: normal; font-style: normal; }
+
+    /* h3 row: bold entry (company or degree) */
+    .h3-row {
+      margin-top: 7pt;
+    }
+
+    /* h4 row: italic job title */
+    .h4-row {
+      margin-top: 2pt;
+    }
+
+    /* Suppress extra top margin for first h3 directly after a section heading */
+    .section-heading + .h3-row,
+    .section-heading + .date-row.h3-row {
+      margin-top: 3pt;
+    }
+
+    /* ── Paragraphs (institution names, dept labels, pubs) ───── */
+    p {
+      margin-top: 0pt;
+      margin-bottom: 4pt;
+    }
+
+    /* Institution/sub-label immediately under an h3 or h4 row */
+    .h3-row + p,
+    .h4-row + p {
+      margin-top: 0;
+      margin-bottom: 3pt;
+    }
+
+    /* ── Bullet lists ────────────────────────────────────────── */
+    ul {
+      margin: 2pt 0 3pt 0;
+      padding-left: 18pt;
+    }
+
+    li {
+      margin-bottom: 2pt;
+    }
+
+    /* ── Links ───────────────────────────────────────────────── */
+    a {
+      color: #1155CC;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cv-header">
+    <div class="cv-name">{{ name }}</div>
+    <div class="cv-contact">{{ phone }} | {{ email }} | {{ location }}</div>
+  </div>
+
+  {{ body }}
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+src/_build.html
+__pycache__/
+*.pyc
+.venv/
