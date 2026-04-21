@@ -69,13 +69,9 @@ export async function getAlbums() {
 
 // Helper to format date from title or created_at
 export function getDisplayDate(title: string, createdAt: string) {
-  if (!title) return new Date(createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  
-  const dateMatch = title.match(/^(\d{1,2})\/(\d{2})/);
-  if (dateMatch) {
-    const month = parseInt(dateMatch[1]) - 1;
-    const year = 2000 + parseInt(dateMatch[2]);
-    return new Date(year, month).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const parsed = getAlbumDate(title);
+  if (parsed) {
+    return parsed.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   }
   return new Date(createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
