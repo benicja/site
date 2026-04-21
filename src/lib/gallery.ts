@@ -33,38 +33,54 @@ export async function getAlbums() {
   
   const albums = data as Album[];
 
-  // Sort logic matching the main gallery page
-  return albums.sort((a, b) => {
-    // 1. If both have manual display_order, strictly follow it
-    if (a.display_order != null && b.display_order != null) {
-      return a.display_order - b.display_order;
+  // Split albums into two groups:
+  //   - pinned: have display_order (user has manually ordered them) — keep that sequence
+  //   - fresh: display_order is null (newly synced or updated) — slot in by title date
+  const pinned = albums
+    .filter(a => a.display_order != null)
+    .sort((a, b) => (a.display_order! - b.display_order!));
+
+  const fresh = albums
+    .filter(a => a.display_order == null)
+    .sort((a, b) => {
+      const da = getAlbumDate(a.title);
+      const db = getAlbumDate(b.title);
+      if (da && db) return db.getTime() - da.getTime();
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+  // Merge: walk the pinned list, inserting each fresh album before the first
+  // pinned album whose title date is older than the fresh album's date.
+  // Fresh albums with no parseable date land at the top (treated as "Recent").
+  const result: Album[] = [];
+  const pinnedDates = pinned.map(p => getAlbumDate(p.title));
+  let cursor = 0;
+
+  for (const freshAlbum of fresh) {
+    const fDate = getAlbumDate(freshAlbum.title);
+
+    while (cursor < pinned.length) {
+      const pDate = pinnedDates[cursor];
+      // If fresh has no date, it ranks above all dated pinned albums.
+      // If fresh has a date, insert before the first pinned album with an older date.
+      const shouldInsert = fDate
+        ? (pDate ? fDate.getTime() > pDate.getTime() : false)
+        : (pDate !== null);
+      if (shouldInsert) break;
+      result.push(pinned[cursor]);
+      cursor++;
     }
+    result.push(freshAlbum);
+  }
 
-    // Calculate "automatic" scores
-    const dateA = getAlbumDate(a.title);
-    const dateB = getAlbumDate(b.title);
-    const createdA = new Date(a.created_at).getTime();
-    const createdB = new Date(b.created_at).getTime();
+  while (cursor < pinned.length) {
+    result.push(pinned[cursor]);
+    cursor++;
+  }
 
-    // Recent albums (no date in title) get a Year 3000 score
-    const scoreA = dateA ? dateA.getTime() : new Date(3000, 0, 1).getTime() + createdA;
-    const scoreB = dateB ? dateB.getTime() : new Date(3000, 0, 1).getTime() + createdB;
-
-    // 2. If one is manual and the other is automatic:
-    if (a.display_order != null) {
-      // Manual album 'a' vs Automatic album 'b'
-      // Automatic 'b' only wins if it's a "Recent" album (Year 3000 score)
-      if (scoreB > new Date(2900, 0, 1).getTime()) return 1;
-      return -1; // Otherwise, manual selection 'a' wins over dated automatic 'b'
-    }
-    if (b.display_order != null) {
-      if (scoreA > new Date(2900, 0, 1).getTime()) return -1;
-      return 1;
-    }
-
-    // 3. Both are automatic: use scores (Recent > Dated)
-    return scoreB - scoreA;
-  });
+  return result;
 }
 
 // Helper to format date from title or created_at
