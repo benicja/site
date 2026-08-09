@@ -54,6 +54,20 @@ if (resolveAuth) {
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="same-origin" />
+    <script is:inline>
+      // Pre-paint auth bridge: mark the html element with the cached
+      // signed-in state before anything renders, so the navbar never
+      // flashes its logged-out variant during full page loads. CSS keyed
+      // on these classes shows the right control; the script under the
+      // header fills in the name and avatar
+      try {
+        const cachedAuth = JSON.parse(sessionStorage.getItem('auth_me_v1') || 'null');
+        if (cachedAuth && cachedAuth.authenticated) {
+          document.documentElement.classList.add('is-authed');
+          if (cachedAuth.isAdmin) document.documentElement.classList.add('is-admin');
+        }
+      } catch (e) {}
+    </script>
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/png" sizes="16x16" href="/images/app_logo.png" />
@@ -134,6 +148,21 @@ if (resolveAuth) {
 
       [data-profile-menu].is-open [data-profile-toggle] {
         background: #e5e7eb;
+      }
+
+      /* Pre-paint bridge: while html carries the cached auth classes, the
+         signed-in navbar variants win over their default hidden state so
+         nothing flashes before the shell script runs */
+      html.is-authed [data-auth-out] {
+        display: none;
+      }
+
+      html.is-authed [data-auth-in] {
+        display: revert;
+      }
+
+      html.is-admin [data-auth-admin] {
+        display: revert;
       }
 
       html {
@@ -566,7 +595,88 @@ if (resolveAuth) {
         </div>
       </div>
     </header>
-    
+
+    {!resolveAuth && (
+      <script is:inline>
+        // Runs immediately after the header is parsed, before it paints, so
+        // the cached signed-in state (name, avatar, admin link) is applied
+        // with no logged-out flash on full page loads. The head bridge
+        // script has already set the html.is-authed/is-admin classes
+        function applyAuthState(data) {
+          document.documentElement.classList.toggle('is-authed', !!data.authenticated);
+          document.documentElement.classList.toggle(
+            'is-admin',
+            !!data.authenticated && !!data.isAdmin
+          );
+
+          const shells = document.querySelectorAll('[data-auth-shell]');
+          const adminLinks = document.querySelectorAll('[data-auth-admin]');
+
+          if (!data.authenticated) {
+            shells.forEach((shell) => {
+              shell.querySelector('[data-auth-in]')?.classList.add('hidden');
+              shell.querySelector('[data-auth-out]')?.classList.remove('hidden');
+            });
+            adminLinks.forEach((link) => link.classList.add('hidden'));
+            return;
+          }
+
+          adminLinks.forEach((link) => {
+            link.classList.toggle('hidden', !data.isAdmin);
+          });
+
+          shells.forEach((shell) => {
+            shell.querySelector('[data-auth-out]')?.classList.add('hidden');
+            shell.querySelector('[data-auth-in]')?.classList.remove('hidden');
+
+            const nameEl = shell.querySelector('[data-auth-name]');
+            if (nameEl) {
+              nameEl.textContent = data.user?.name || data.user?.email || '';
+            }
+
+            const avatarImg = shell.querySelector('[data-auth-avatar]');
+            const avatarFallback = shell.querySelector('[data-auth-avatar-fallback]');
+            if (avatarImg && data.user?.avatar) {
+              avatarImg.src = data.user.avatar;
+              avatarImg.classList.remove('hidden');
+              avatarFallback?.classList.add('hidden');
+            }
+          });
+        }
+
+        function applyCachedAuth() {
+          try {
+            const raw = sessionStorage.getItem('auth_me_v1');
+            if (raw) applyAuthState(JSON.parse(raw));
+          } catch {}
+        }
+
+        async function hydrateAuthShell() {
+          try {
+            const response = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!response.ok) return;
+            const data = await response.json();
+            try {
+              sessionStorage.setItem('auth_me_v1', JSON.stringify(data));
+            } catch {}
+            applyAuthState(data);
+          } catch (error) {
+            console.error('Auth hydrate failed', error);
+          }
+        }
+
+        applyCachedAuth();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', hydrateAuthShell);
+        } else {
+          hydrateAuthShell();
+        }
+
+        document.addEventListener('astro:after-swap', applyCachedAuth);
+        document.addEventListener('astro:page-load', hydrateAuthShell);
+      </script>
+    )}
+
     <main>
       <slot />
     </main>
@@ -655,79 +765,6 @@ if (resolveAuth) {
       }
     </script>
 
-    {!resolveAuth && (
-      <script is:inline>
-        function applyAuthState(data) {
-          const shells = document.querySelectorAll('[data-auth-shell]');
-          const adminLinks = document.querySelectorAll('[data-auth-admin]');
-
-          if (!data.authenticated) {
-            shells.forEach((shell) => {
-              shell.querySelector('[data-auth-in]')?.classList.add('hidden');
-              shell.querySelector('[data-auth-out]')?.classList.remove('hidden');
-            });
-            adminLinks.forEach((link) => link.classList.add('hidden'));
-            return;
-          }
-
-          adminLinks.forEach((link) => {
-            link.classList.toggle('hidden', !data.isAdmin);
-          });
-
-          shells.forEach((shell) => {
-            shell.querySelector('[data-auth-out]')?.classList.add('hidden');
-            shell.querySelector('[data-auth-in]')?.classList.remove('hidden');
-
-            const nameEl = shell.querySelector('[data-auth-name]');
-            if (nameEl) {
-              nameEl.textContent = data.user?.name || data.user?.email || '';
-            }
-
-            const avatarImg = shell.querySelector('[data-auth-avatar]');
-            const avatarFallback = shell.querySelector('[data-auth-avatar-fallback]');
-            if (avatarImg && data.user?.avatar) {
-              avatarImg.src = data.user.avatar;
-              avatarImg.classList.remove('hidden');
-              avatarFallback?.classList.add('hidden');
-            }
-          });
-        }
-
-        // The last known auth state paints immediately (this script and the
-        // after-swap hook both run before the browser paints), then the
-        // network fetch reconciles quietly
-        function applyCachedAuth() {
-          try {
-            const raw = sessionStorage.getItem('auth_me_v1');
-            if (raw) applyAuthState(JSON.parse(raw));
-          } catch {}
-        }
-
-        async function hydrateAuthShell() {
-          try {
-            const response = await fetch('/api/auth/me', { credentials: 'include' });
-            if (!response.ok) return;
-            const data = await response.json();
-            try {
-              sessionStorage.setItem('auth_me_v1', JSON.stringify(data));
-            } catch {}
-            applyAuthState(data);
-          } catch (error) {
-            console.error('Auth hydrate failed', error);
-          }
-        }
-
-        applyCachedAuth();
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', hydrateAuthShell);
-        } else {
-          hydrateAuthShell();
-        }
-
-        document.addEventListener('astro:after-swap', applyCachedAuth);
-        document.addEventListener('astro:page-load', hydrateAuthShell);
-      </script>
-    )}
     <script is:inline>
       // Profile chip menus: click to toggle, close on outside click or Escape
       (function initProfileMenus() {
@@ -744,6 +781,14 @@ if (resolveAuth) {
         document.addEventListener('click', (event) => {
           const target = event.target;
           if (!(target instanceof Element)) return;
+
+          // Leaving via logout: drop the cached auth state now so the next
+          // page's pre-paint bridge doesn't flash a stale signed-in chip
+          if (target.closest('a[href="/auth/logout"]')) {
+            try {
+              sessionStorage.removeItem('auth_me_v1');
+            } catch {}
+          }
 
           const toggle = target.closest('[data-profile-toggle]');
           if (toggle) {
