@@ -178,19 +178,24 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
       )}
 
       {!isGhost && (
-        <script is:inline define:vars={{ slug }}>
+        <script is:inline>
+          // Bound once via delegation: the client router swaps in fresh DOM
+          // without re-running identical inline scripts, so element-bound
+          // listeners would leave the button dead on revisited recipes
           (function () {
-            const btn = document.getElementById('share-recipe-btn');
-            const modal = document.getElementById('share-recipe-modal');
-            const backdrop = document.getElementById('share-recipe-backdrop');
-            const wrap = document.getElementById('share-recipe-wrap');
-            const panel = document.getElementById('share-recipe-panel');
-            const closeBtn = document.getElementById('share-recipe-close');
-            const linkInput = document.getElementById('share-recipe-link');
-            const copyBtn = document.getElementById('share-recipe-copy');
-            if (!btn || !modal || !panel || !linkInput || !copyBtn) return;
+            if (window.__recipeShareBound) return;
+            window.__recipeShareBound = true;
 
             let copiedTimer;
+
+            const els = () => ({
+              modal: document.getElementById('share-recipe-modal'),
+              backdrop: document.getElementById('share-recipe-backdrop'),
+              wrap: document.getElementById('share-recipe-wrap'),
+              panel: document.getElementById('share-recipe-panel'),
+              linkInput: document.getElementById('share-recipe-link'),
+              copyBtn: document.getElementById('share-recipe-copy')
+            });
 
             const snackbar = (message) => {
               const el = document.createElement('div');
@@ -214,25 +219,29 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
             };
 
             const openModal = () => {
-              linkInput.value = `${window.location.origin}/recipes/${encodeURIComponent(slug)}`;
+              const { modal, backdrop, panel, linkInput } = els();
+              if (!modal || !panel || !linkInput) return;
+              linkInput.value = window.location.origin + window.location.pathname;
               modal.classList.remove('hidden');
               document.body.style.overflow = 'hidden';
               requestAnimationFrame(() => {
-                backdrop.classList.remove('opacity-0');
+                backdrop?.classList.remove('opacity-0');
                 panel.classList.remove('opacity-0', 'translate-y-2');
               });
             };
 
             const closeModal = () => {
-              backdrop.classList.add('opacity-0');
-              panel.classList.add('opacity-0', 'translate-y-2');
+              const { modal, backdrop, panel } = els();
+              if (!modal) return;
+              backdrop?.classList.add('opacity-0');
+              panel?.classList.add('opacity-0', 'translate-y-2');
               document.body.style.overflow = '';
               setTimeout(() => modal.classList.add('hidden'), 200);
             };
 
-            btn.addEventListener('click', openModal);
-
-            copyBtn.addEventListener('click', async () => {
+            const copyLink = async () => {
+              const { linkInput, copyBtn } = els();
+              if (!linkInput || !copyBtn) return;
               try {
                 await navigator.clipboard.writeText(linkInput.value);
               } catch {
@@ -249,15 +258,24 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
                 copyIcon?.classList.remove('hidden');
                 copiedIcon?.classList.add('hidden');
               }, 1500);
+            };
+
+            document.addEventListener('click', (event) => {
+              const target = event.target;
+              if (!(target instanceof Element)) return;
+              if (target.closest('#share-recipe-btn')) return openModal();
+              if (target.closest('#share-recipe-copy')) return void copyLink();
+              if (target.closest('#share-recipe-close')) return closeModal();
+              const { wrap, backdrop } = els();
+              if (backdrop && target === backdrop) return closeModal();
+              if (wrap && target === wrap) return closeModal();
             });
 
-            closeBtn?.addEventListener('click', closeModal);
-            backdrop?.addEventListener('click', closeModal);
-            wrap?.addEventListener('click', (event) => {
-              if (event.target === wrap) closeModal();
-            });
             document.addEventListener('keydown', (event) => {
-              if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+              const { modal } = els();
+              if (event.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+                closeModal();
+              }
             });
           })();
         </script>
