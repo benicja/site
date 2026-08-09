@@ -1,6 +1,6 @@
 ---
 title: "Cinnamon Buns"
-description: "Fluffy Polish cinnamon rolls, brown butter, orange mascarpone cream."
+description: "Coming soon"
 featured_image: "/images/recipes/cinnamon_buns.jpg"
 prep_time: 30
 cook_time: 25

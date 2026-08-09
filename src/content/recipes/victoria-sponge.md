@@ -1,6 +1,6 @@
 ---
 title: "Victoria Sponge"
-description: "Classic British layer cake."
+description: "Coming soon"
 featured_image: "/images/recipes/victoria_sponge.jpg"
 prep_time: 20
 cook_time: 25

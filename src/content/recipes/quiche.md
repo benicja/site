@@ -1,6 +1,6 @@
 ---
 title: "Quiche"
-description: "A rich and flavourful quiche Lorraine with vaults of vegetables and cheesy, creamy filling."
+description: "Coming soon"
 featured_image: "/images/recipes/quiche_best.jpg"
 prep_time: 30
 cook_time: 55

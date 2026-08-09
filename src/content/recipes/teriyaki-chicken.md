@@ -1,6 +1,6 @@
 ---
 title: "Teriyaki Chicken"
-description: "A sweet and sticky teriyaki chicken stir fry."
+description: "Coming soon"
 featured_image: "/images/recipes/teryaki.jpg"
 prep_time: 15
 cook_time: 25

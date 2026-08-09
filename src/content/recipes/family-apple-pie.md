@@ -1,6 +1,6 @@
 ---
 title: "Family Apple Pie"
-description: "Classic apple pie."
+description: "Coming soon"
 featured_image: "/images/recipes/pie.jpeg"
 prep_time: 25
 cook_time: 50

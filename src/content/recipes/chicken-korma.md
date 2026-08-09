@@ -1,6 +1,6 @@
 ---
 title: "Chicken Korma"
-description: "A creamy chicken curry."
+description: "Coming soon"
 featured_image: "/images/recipes/no_photo.png"
 prep_time: 10
 cook_time: 25

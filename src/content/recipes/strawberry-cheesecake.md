@@ -1,6 +1,6 @@
 ---
 title: "Strawberry Cheesecake"
-description: "A smooth and creamy baked cheesecake with a zesty lemon filling and a vibrant berry topping. A family favorite for any occasion."
+description: "Coming soon"
 featured_image: "/images/recipes/strawberry_cheese_cake.jpg"
 prep_time: 25
 cook_time: 60

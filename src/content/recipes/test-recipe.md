@@ -1,6 +1,6 @@
 ---
 title: "TEST RECIPE"
-description: "TEST RECIPE TEST RECIPE"
+description: "Coming soon"
 featured_image: "/images/recipes/test-recipe-1771369284847-2a9135c0.jpg"
 prep_time: 111
 cook_time: 222

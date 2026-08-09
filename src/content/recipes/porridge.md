@@ -1,6 +1,6 @@
 ---
 title: "Jumbo Oat Porridge"
-description: "A hearty bowl of jumbo oats prepared with milk, fresh bananas, and mixed frozen berries for the perfect morning start."
+description: "Coming soon"
 featured_image: "/images/recipes/porridge.png"
 prep_time: 2
 cook_time: 12

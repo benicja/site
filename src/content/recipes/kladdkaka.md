@@ -1,6 +1,6 @@
 ---
 title: "Kladdkaka"
-description: "A gooey Swedish chocolate cake."
+description: "Coming soon"
 featured_image: "/images/recipes/klakada.jpg"
 prep_time: 10
 cook_time: 20

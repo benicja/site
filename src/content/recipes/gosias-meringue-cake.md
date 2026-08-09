@@ -1,6 +1,6 @@
 ---
 title: "Gosia's Meringue Cake"
-description: "Meringue, cream and berries cake. But as a warning: it will not last long."
+description: "Coming soon"
 featured_image: "/images/recipes/cream_cake.jpg"
 prep_time: 25
 cook_time: 90

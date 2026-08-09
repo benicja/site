@@ -1,6 +1,6 @@
 ---
 title: "Leek And Chicken Pie"
-description: "A hearty Joe Wicks-inspired chicken pie, creamy and satisfying with tender chicken, leeks, sweet potato, and flaky pastry."
+description: "Coming soon"
 featured_image: "/images/recipes/chicken_pie_better.png"
 prep_time: 15
 cook_time: 25

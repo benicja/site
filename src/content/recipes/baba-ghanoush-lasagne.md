@@ -1,6 +1,6 @@
 ---
 title: "Baba Ghanoush Lasagne"
-description: "A fusion lasagne with baba ghanoush, aubergine, and beef."
+description: "Coming soon"
 featured_image: "/images/recipes/baba_lasagne.jpg"
 prep_time: 60
 cook_time: 60

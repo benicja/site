@@ -1,6 +1,6 @@
 ---
 title: "Shortbread"
-description: "Classic buttery shortbread, soft and crumbly."
+description: "Coming soon"
 featured_image: "/images/recipes/shortbread.jpeg"
 prep_time: 10
 cook_time: 30

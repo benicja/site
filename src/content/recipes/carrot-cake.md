@@ -1,6 +1,6 @@
 ---
 title: "Carrot Cake"
-description: "A simplified, memorizable Swedish-style carrot cake that's light, fluffy, and perfect for kids and adults alike."
+description: "Coming soon"
 featured_image: "/images/recipes/carrot_cake_slice.jpg"
 prep_time: 20
 cook_time: 30

@@ -1,6 +1,6 @@
 ---
 title: Cheesecake San Sebastián
-description: A decadent Basque-style cheesecake with a perfectly burnt, caramelized top and a creamy, melt-in-your-mouth interior.
+description: "Coming soon"
 featured_image: /images/recipes/cheesecake.jpg
 prep_time: 20
 cook_time: 40

@@ -1,6 +1,6 @@
 ---
 title: "Pan Fried Salmon"
-description: "Crispy pan-seared salmon with lemon garlic sauce and sweet potato fries."
+description: "Coming soon"
 featured_image: "/images/recipes/salmon.jpg"
 prep_time: 15
 cook_time: 25

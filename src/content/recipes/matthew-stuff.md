@@ -1,6 +1,6 @@
 ---
 title: "MATTHEW STUFF"
-description: "MATTHEW STUFFMATTHEW STUFFMATTHEW STUFFMATTHEW STUFFMATTHEW STUFF"
+description: "Coming soon"
 featured_image: "/images/recipes/matthew-stuff-1771372485962-076e2d96.jpg"
 prep_time: 2
 cook_time: 34

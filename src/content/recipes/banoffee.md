@@ -1,6 +1,6 @@
 ---
 title: "Banoffee"
-description: "Rich banoffee pie with digestive biscuit base."
+description: "Coming soon"
 featured_image: "/images/recipes/banoffee.jpg"
 prep_time: 20
 cook_time: 10

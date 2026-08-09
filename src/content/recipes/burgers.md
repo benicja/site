@@ -1,6 +1,6 @@
 ---
 title: "Burgers"
-description: "Homemade burgers with all the classic fixings."
+description: "Coming soon"
 featured_image: "/images/recipes/burgers.jpg"
 prep_time: 10
 cook_time: 15
