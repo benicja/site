@@ -110,7 +110,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
             {['Albums', 'Itinerary'].map(view => (
               <button
                 type="button"
-                class="filter-btn px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-100 select-none data-[active=true]:bg-[#c2410c]/5 data-[active=true]:text-[#c2410c] data-[active=true]:border-[#c2410c] [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-400"
+                class="filter-btn px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-100 select-none data-[active=true]:bg-[#0284c7]/5 data-[active=true]:text-[#0284c7] data-[active=true]:border-[#0284c7] [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-400"
                 data-filter="gallery-view"
                 data-value={view.toLowerCase()}
                 data-active={view === 'Albums' ? 'true' : 'false'}
@@ -163,7 +163,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                   
                   <div class="px-5 md:px-8 pt-2 pb-3 md:pt-3 md:pb-5 flex flex-col flex-1 justify-center text-center">
                     <div class="flex flex-col items-center gap-1 md:gap-2">
-                      <h3 class="text-lg md:text-xl font-serif font-medium text-gray-900 group-hover:text-[#c2410c] transition-colors duration-300 m-0 leading-tight">
+                      <h3 class="text-lg md:text-xl font-serif font-medium text-gray-900 group-hover:text-[#0284c7] transition-colors duration-300 m-0 leading-tight">
                         {getDisplayTitle(album.title)}
                       </h3>
                       <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
