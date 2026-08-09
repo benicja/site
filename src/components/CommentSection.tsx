@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Comment } from '../lib/supabase';
+import { getPageData } from '../lib/pageData';
 
 interface User {
   id: string;
@@ -10,7 +11,10 @@ interface User {
 
 interface Props {
   recipeId: string;
-  user: User | null;
+  // When omitted, the component resolves the session itself via
+  // /api/recipes/page-data (used on prerendered pages that can't
+  // resolve auth server-side)
+  user?: User | null;
   isAdmin?: boolean;
 }
 // Separate component for heart button
@@ -44,7 +48,10 @@ const HeartButton = ({
     <span className="heart-count">{heartCount}</span>
   </button>
 );
-export default function CommentSection({ recipeId, user, isAdmin = false }: Props) {
+export default function CommentSection({ recipeId, user: userProp, isAdmin: isAdminProp = false }: Props) {
+  const selfResolveAuth = userProp === undefined;
+  const [user, setUser] = useState<User | null>(userProp ?? null);
+  const [isAdmin, setIsAdmin] = useState(isAdminProp);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
@@ -58,6 +65,25 @@ export default function CommentSection({ recipeId, user, isAdmin = false }: Prop
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const userComment = comments.find(c => c.user_id === user?.id);
+
+  // Resolve the session client-side when no user prop was given
+  useEffect(() => {
+    if (!selfResolveAuth) return;
+    let cancelled = false;
+    getPageData().then((data) => {
+      if (cancelled || !data?.authenticated || !data.user) return;
+      setUser({
+        id: data.user.id,
+        user_email: data.user.user_email,
+        user_name: data.user.user_name ?? undefined,
+        user_avatar: data.user.user_avatar ?? undefined,
+      });
+      setIsAdmin(data.isAdmin);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selfResolveAuth]);
 
   // Fetch comments on mount
   useEffect(() => {

@@ -1,67 +1,43 @@
 ---
-export const prerender = false;
+// Prerendered at build so the page is a pure CDN hit and hover-prefetch makes
+// navigation instant. The custom order and soft-deletes are baked in at build
+// time so the first paint is correct; client-side page-data then reconciles
+// anything that changed since the last deploy (plus hearts and auth state)
+export const prerender = true;
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import RecipeCard from '../../components/RecipeCard.astro';
-import { SESSION_COOKIE, getUserFromSession } from '../../lib/auth';
-import { getRecipeHearts, getUserHearts } from '../../lib/hearts';
 import { supabaseAdmin } from '../../lib/supabase';
 
-// Get current user
-const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
-const user = sessionId ? await getUserFromSession(sessionId) : null;
-
-// Get all recipes
 const allRecipes = await getCollection('recipes');
 
-// Get deleted recipes from Supabase
-const { data: deletedRecipes } = await supabaseAdmin
-  .from('deleted_recipes')
-  .select('recipe_slug');
-
-const deletedSlugs = new Set((deletedRecipes || []).map(d => d.recipe_slug));
-
-// Filter out deleted recipes
-const recipes = allRecipes.filter(recipe => !deletedSlugs.has(recipe.slug));
-
-// Load custom recipe order from Supabase
+// Best-effort at build time; the page still builds if Supabase is unreachable
 let recipeOrder: string[] = [];
+let deletedSlugs = new Set<string>();
 try {
-  const { data: orderData } = await supabaseAdmin
-    .from('recipe_order')
-    .select('order_slugs')
-    .eq('id', 'primary')
-    .single();
-  
-  if (orderData) {
-    recipeOrder = orderData.order_slugs || [];
-  }
+  const [orderRes, deletedRes] = await Promise.all([
+    supabaseAdmin.from('recipe_order').select('order_slugs').eq('id', 'primary').maybeSingle(),
+    supabaseAdmin.from('deleted_recipes').select('recipe_slug')
+  ]);
+  recipeOrder = orderRes.data?.order_slugs || [];
+  deletedSlugs = new Set((deletedRes.data || []).map((d) => d.recipe_slug));
 } catch (error) {
-  // No order exists yet, use default sorting
+  console.warn('Could not load recipe order/deletions at build time', error);
 }
 
-// Sort recipes: first by custom order if exists, then by publishDate (newest first), then alphabetically
+const recipes = allRecipes.filter((recipe) => !deletedSlugs.has(recipe.slug));
+
+// Custom order first, then publishDate (newest first), then alphabetical
 const sortedRecipes = recipes.sort((a, b) => {
   const aIndex = recipeOrder.indexOf(a.slug);
   const bIndex = recipeOrder.indexOf(b.slug);
-  
-  // If both are in custom order, sort by that
-  if (aIndex !== -1 && bIndex !== -1) {
-    return aIndex - bIndex;
-  }
-  // If only one is in custom order, it comes first
+  if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
   if (aIndex !== -1) return -1;
   if (bIndex !== -1) return 1;
-  
-  // Otherwise, sort by publishDate (newest first), then alphabetically
   const dateDiff = (b.data.publishDate?.getTime() || 0) - (a.data.publishDate?.getTime() || 0);
   if (dateDiff !== 0) return dateDiff;
   return a.data.title.localeCompare(b.data.title);
 });
-
-// Get heart data
-const globalHearts = await getRecipeHearts();
-const userHearts = user ? await getUserHearts(user.user_email) : new Set();
 
 const formatCategories = (value: unknown): string => (Array.isArray(value) ? value.join(',') : String(value));
 ---
@@ -81,7 +57,7 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
   }
 </style>
 
-<Layout title="Recipes" description="A collection of our favorite family recipes." user={user}>
+<Layout title="Recipes" description="A collection of our favorite family recipes." resolveAuth={false}>
   <div class="recipes-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 sm:pb-10">
     {recipes.length > 0 ? (
       <div class="space-y-6">
@@ -122,11 +98,13 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
               </button>
             ))}
             
-            {user && (
-              <button 
+            {/* Hidden until page-data confirms a signed-in user */}
+            {(
+              <button
                 type="button"
-                class="filter-btn px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 select-none flex items-center gap-2 data-[active=true]:bg-gray-50 data-[active=true]:text-gray-950 data-[active=true]:border-gray-950 md:[&:not([data-active=true])]:hover:text-gray-900 md:[&:not([data-active=true])]:hover:border-gray-400"
+                class="filter-btn hidden px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 select-none items-center gap-2 data-[active=true]:bg-gray-50 data-[active=true]:text-gray-950 data-[active=true]:border-gray-950 md:[&:not([data-active=true])]:hover:text-gray-900 md:[&:not([data-active=true])]:hover:border-gray-400"
                 data-filter="hearted"
+                data-requires-auth
                 data-active="false"
               >
                 <svg class="w-3.5 h-3.5 fill-none stroke-current" viewBox="0 0 24 24">
@@ -139,21 +117,19 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
         </div>
 
         <section>
+          <!-- Cards deliberately carry no content-visibility: its estimated
+               placeholder height differs from a real card, so total page height
+               changed as you scrolled and scroll restoration landed short -->
           <div id="recipes-grid" class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-8 md:gap-y-8">
             {sortedRecipes.map((recipe, index) => (
-              <div 
-                class="recipe-item" 
-                style={`content-visibility: auto; contain-intrinsic-size: 1px 400px;`}
+              <div
+                class={`recipe-item${index < 12 ? ' rise' : ''}`}
+                style={index < 12 ? `--rise-delay: ${index * 40}ms` : ''}
                 data-title={recipe.data.title.toLowerCase()}
                 data-category={formatCategories(recipe.data.category).toLowerCase()}
-                data-hearted={userHearts.has(recipe.slug).toString()}
+                data-hearted="false"
               >
-                <RecipeCard 
-                  recipe={recipe} 
-                  user={user}
-                  isHearted={userHearts.has(recipe.slug)}
-                  heartCount={(globalHearts as any)[recipe.slug] || 0}
-                />
+                <RecipeCard recipe={recipe} />
               </div>
             ))}
           </div>
@@ -161,6 +137,125 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
              <h2 class="text-2xl font-serif text-gray-400">No recipes match your search.</h2>
           </div>
         </section>
+
+        <script is:inline>
+          // Applies cached page state (custom order, deletions, heart counts,
+          // the user's hearted recipes, signed-in flag) to the static grid.
+          // Runs synchronously right after the grid is parsed, before first
+          // paint, so nothing visibly pops or reshuffles when coming back to
+          // this page. The module script re-uses it via
+          // window.__applyRecipesLayout once fresh page-data arrives
+          (function () {
+            function slugOf(item) {
+              var card = item.querySelector('[data-recipe-slug]');
+              return card ? card.getAttribute('data-recipe-slug') : null;
+            }
+
+            function applyRecipesLayout(layout, settle) {
+              var grid = document.getElementById('recipes-grid');
+              if (!grid || !layout) return;
+
+              if (layout.deleted && layout.deleted.length) {
+                var deleted = {};
+                layout.deleted.forEach(function (slug) { deleted[slug] = true; });
+                Array.prototype.slice.call(grid.children).forEach(function (item) {
+                  var slug = slugOf(item);
+                  if (slug && deleted[slug]) item.remove();
+                });
+              }
+
+              if (layout.order && layout.order.length) {
+                var current = Array.prototype.slice.call(grid.children);
+                var bySlug = {};
+                current.forEach(function (item) {
+                  var slug = slugOf(item);
+                  if (slug) bySlug[slug] = item;
+                });
+
+                var ordered = [];
+                layout.order.forEach(function (slug) {
+                  if (bySlug[slug]) {
+                    ordered.push(bySlug[slug]);
+                    delete bySlug[slug];
+                  }
+                });
+                current.forEach(function (item) {
+                  var slug = slugOf(item);
+                  if (!slug || bySlug[slug]) ordered.push(item);
+                });
+
+                var changed = ordered.some(function (el, i) { return el !== current[i]; });
+                if (changed) {
+                  // Moving a node restarts its CSS animation, so if this runs
+                  // after paint (settle), finish the entrance first
+                  if (settle) {
+                    current.forEach(function (el) { el.classList.remove('rise'); });
+                  }
+                  ordered.forEach(function (el, i) {
+                    // Only the first screenful staggers in; everything deeper
+                    // must be instantly visible for scroll restoration
+                    if (i < 12 && el.classList.contains('rise')) {
+                      el.style.setProperty('--rise-delay', i * 40 + 'ms');
+                    } else {
+                      el.classList.remove('rise');
+                    }
+                    grid.appendChild(el);
+                  });
+                }
+              }
+
+              var userHearts = {};
+              (layout.userHearts || []).forEach(function (slug) { userHearts[slug] = true; });
+              var hasCounts = !!layout.hearts;
+
+              Array.prototype.slice.call(grid.children).forEach(function (item) {
+                var btn = item.querySelector('.heart-button');
+                var slug = btn && btn.getAttribute('data-slug');
+                if (!btn || !slug) return;
+
+                btn.setAttribute('data-user', layout.authenticated ? 'true' : 'false');
+
+                if (hasCounts) {
+                  var countEl = item.querySelector('.heart-count');
+                  if (countEl) countEl.textContent = String(layout.hearts[slug] || 0);
+                }
+
+                // Both directions, so signing out or un-hearting elsewhere
+                // corrects the card instead of leaving it stuck red
+                var hearted = !!userHearts[slug];
+                btn.setAttribute('data-hearted', hearted ? 'true' : 'false');
+                item.setAttribute('data-hearted', hearted ? 'true' : 'false');
+                var topSvg = btn.querySelector('.top-heart-icon');
+                if (topSvg) {
+                  if (hearted) {
+                    topSvg.classList.remove('fill-none', 'stroke-white', 'text-white');
+                    topSvg.classList.add('fill-red-500', 'stroke-red-500', 'text-red-500');
+                    topSvg.setAttribute('fill', 'currentColor');
+                  } else {
+                    topSvg.classList.add('fill-none', 'stroke-white', 'text-white');
+                    topSvg.classList.remove('fill-red-500', 'stroke-red-500', 'text-red-500');
+                    topSvg.setAttribute('fill', 'none');
+                  }
+                }
+              });
+
+              document.querySelectorAll('[data-requires-auth]').forEach(function (el) {
+                if (layout.authenticated) {
+                  el.classList.remove('hidden');
+                  el.classList.add('flex');
+                } else {
+                  el.classList.add('hidden');
+                  el.classList.remove('flex');
+                }
+              });
+            }
+
+            window.__applyRecipesLayout = applyRecipesLayout;
+            try {
+              applyRecipesLayout(JSON.parse(localStorage.getItem('recipes_layout_v2') || 'null'));
+            } catch (e) {}
+          })();
+        </script>
       </div>
     ) : (
       <div class="py-32 text-center border-t border-gray-100">
@@ -173,6 +268,29 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
 
 
   <script>
+    import { getPageData } from '../../lib/pageData';
+
+    // The page is prerendered, so hearts, custom ordering, soft-deletes and
+    // signed-in state arrive via one page-data fetch. Everything visual is
+    // also cached in localStorage and applied pre-paint by the inline script
+    // below the grid, so this fresh pass is usually a no-op visually
+    async function applyPageData() {
+      const data = await getPageData();
+      if (!data) return;
+
+      const layout = {
+        order: data.order,
+        deleted: data.deleted,
+        authenticated: data.authenticated,
+        hearts: data.hearts,
+        userHearts: data.userHearts,
+      };
+      try {
+        localStorage.setItem('recipes_layout_v2', JSON.stringify(layout));
+      } catch {}
+      (window as any).__applyRecipesLayout?.(layout, true);
+    }
+
     function initSearch() {
       const searchInput = document.getElementById('recipe-search') as HTMLInputElement | null;
       const recipeItems = document.querySelectorAll('.recipe-item') as NodeListOf<HTMLElement>;
@@ -420,6 +538,11 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
                     const newItem = template.cloneNode(true) as HTMLElement;
                     grid.prepend(newItem);
                     hydrateCardElement(newItem, slug, data);
+                    // The static build doesn't have this recipe yet, so link
+                    // to the SSR ghost route instead of a guaranteed 404
+                    const pendingHref = `/recipes/pending/${slug}`;
+                    newItem.querySelector('.recipe-link')?.setAttribute('href', pendingHref);
+                    newItem.querySelector('a.block.group')?.setAttribute('href', pendingHref);
                   }
                 }
               } catch (e) {}
@@ -434,7 +557,34 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
       hydrateCards();
     }
 
+    let navDirection = 'forward';
+    document.addEventListener('astro:before-preparation', (event) => {
+      navDirection = (event as any).direction;
+    });
+
+    // After a client-side swap the fresh DOM is back in build order; re-apply
+    // the cached layout synchronously, before the browser paints the new page
+    document.addEventListener('astro:after-swap', () => {
+      if (!document.getElementById('recipes-grid')) return;
+
+      // Going back restores a scroll position, so the entrance animation must
+      // not run: cards start invisible and would pop in around wherever the
+      // restore landed
+      if (navDirection === 'back') {
+        document.querySelectorAll('.recipe-item.rise').forEach((el) => el.classList.remove('rise'));
+      }
+
+      try {
+        (window as any).__applyRecipesLayout?.(
+          JSON.parse(localStorage.getItem('recipes_layout_v2') || 'null')
+        );
+      } catch {}
+    });
+
     // Re-initialize after view transitions
-    document.addEventListener('astro:page-load', initSearch);
+    document.addEventListener('astro:page-load', () => {
+      initSearch();
+      applyPageData();
+    });
   </script>
 </Layout>

@@ -1,0 +1,15 @@
+---
+// Server-rendered ghost route for recipes created in the portal that the
+// static build doesn't know about yet. Renders the main recipe page
+// component, whose getEntry miss triggers its ghost branch; the inline
+// script there fills content from the optimistic localStorage cache.
+// Reached via the 404 page's bounce or the optimistic cards on /recipes.
+export const prerender = false;
+import RecipePage from '../[slug].astro';
+
+// The page's props type is inferred as never from its getStaticPaths,
+// so cast for component use. It reads Astro.params, not props
+const Page = RecipePage as any;
+---
+
+<Page />

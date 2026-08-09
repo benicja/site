@@ -23,7 +23,9 @@ const {
   enableTransitions = true
 } = Astro.props;
 
-const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+// Only touch cookies when auth is resolved server-side; prerendered pages
+// have no request and would warn at build time
+const sessionId = resolveAuth ? Astro.cookies.get(SESSION_COOKIE)?.value : undefined;
 
 let user = userProp ?? null;
 let isAdmin = typeof isAdminProp === 'boolean' ? isAdminProp : false;
@@ -77,177 +79,49 @@ if (resolveAuth) {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
     <script is:inline src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     {enableTransitions && <ClientRouter />}
-    <script is:inline>
-      // Enable manual scroll restoration
-      if ('scrollRestoration' in window.history) {
-        window.history.scrollRestoration = 'manual';
-      }
-
-      // Identify which recipe card is visible and save it
-      const getVisibleRecipeCard = () => {
-        const cards = document.querySelectorAll('[data-recipe-slug]');
-        if (cards.length === 0) return null;
-        
-        const viewportCenter = window.innerHeight / 2;
-        let closestCard = null;
-        let closestDistance = Infinity;
-        
-        cards.forEach((card) => {
-          const rect = card.getBoundingClientRect();
-          const cardCenter = (rect.top + rect.bottom) / 2;
-          const distance = Math.abs(cardCenter - viewportCenter);
-          
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestCard = card.getAttribute('data-recipe-slug');
-          }
-        });
-        
-        return closestCard;
-      };
-
-      // Save scroll tracking
-      let saveScrollTimeout;
-      if (window.location.pathname === '/recipes') {
-        const saveScrollData = () => {
-          clearTimeout(saveScrollTimeout);
-          saveScrollTimeout = setTimeout(() => {
-            const recipeSlug = getVisibleRecipeCard();
-            if (recipeSlug) {
-              sessionStorage.setItem('recipesVisibleCard', recipeSlug);
-            }
-            sessionStorage.setItem('recipesScrollPosition', window.scrollY.toString());
-          }, 100); // Debounce
-        };
-        
-        window.addEventListener('scroll', saveScrollData, { passive: true });
-        saveScrollData();
-      }
-
-      // Wait for all images to load
-      const waitForImagesLoaded = () => {
-        return new Promise((resolve) => {
-          const images = document.querySelectorAll('img');
-          if (images.length === 0) {
-            resolve(null);
-            return;
-          }
-          
-          let loadedCount = 0;
-          const totalImages = images.length;
-          
-          images.forEach((img) => {
-            if (img.complete) {
-              loadedCount++;
-              if (loadedCount === totalImages) resolve(null);
-            } else {
-              img.onload = () => {
-                loadedCount++;
-                if (loadedCount === totalImages) resolve(null);
-              };
-              img.onerror = () => {
-                loadedCount++;
-                if (loadedCount === totalImages) resolve(null);
-              };
-            }
-          });
-          
-          // Timeout after 3 seconds
-          setTimeout(() => resolve(null), 3000);
-        });
-      };
-
-      // Scroll to recipe card or fallback to saved Y position
-      const restoreScrollPosition = async (recipeSlug, fallbackY) => {
-        await waitForImagesLoaded();
-        
-        // Small delay for layout to settle
-        await new Promise(r => setTimeout(r, 100));
-        
-        // Try to scroll to the recipe card first
-        if (recipeSlug) {
-          const recipeCard = document.querySelector(`[data-recipe-slug="${recipeSlug}"]`);
-          if (recipeCard) {
-            // Scroll card to top of viewport with 20px offset
-            recipeCard.scrollIntoView(true); // Align to top
-            
-            // Then adjust by 20px downward for spacing
-            const headerHeight = 80; // Approximate header height
-            window.scrollBy(0, -headerHeight + 20);
-            
-            // Wait a frame and verify
-            await new Promise(r => requestAnimationFrame(r));
-            
-            // Get final position and check if card is properly positioned
-            const rect = recipeCard.getBoundingClientRect();
-            const targetViewportY = 140; // Position card roughly 140px down from top (below header)
-            
-            if (Math.abs(rect.top - targetViewportY) > 10) {
-              // Not quite right, fine-tune
-              const adjustment = rect.top - targetViewportY;
-              window.scrollBy(0, adjustment);
-            }
-            
-            return;
-          }
-        }
-        
-        // Fallback to saved Y position if card not found
-        if (fallbackY !== undefined && fallbackY > 0) {
-          window.scrollTo({ top: fallbackY, left: 0, behavior: 'instant' });
-          
-          // Additional verification after a frame
-          await new Promise(r => requestAnimationFrame(r));
-          
-          if (Math.abs(window.scrollY - fallbackY) > 5) {
-            window.scrollTo({ top: fallbackY, left: 0, behavior: 'instant' });
-          }
-        }
-      };
-
-      // Listen for navigation from recipe back to recipes
-      document.addEventListener('astro:before-preparation', () => {
-        const fromRecipe = window.location.pathname.startsWith('/recipes/') && window.location.pathname !== '/recipes';
-        
-        if (fromRecipe) {
-          // Disable transitions
-          document.documentElement.style.viewTransitionName = 'none !important';
-          document.body.style.viewTransitionName = 'none !important';
-          
-          // Mark that we need to restore scroll
-          const visibleCard = sessionStorage.getItem('recipesVisibleCard');
-          const scrollPos = sessionStorage.getItem('recipesScrollPosition');
-          if (visibleCard) {
-            sessionStorage.setItem('recipesRestoreCard', visibleCard);
-          }
-          if (scrollPos) {
-            sessionStorage.setItem('recipesRestoreY', scrollPos);
-          }
-        }
-      });
-
-      // Restore after page swap
-      document.addEventListener('astro:page-load', async () => {
-        document.documentElement.style.viewTransitionName = '';
-        document.body.style.viewTransitionName = '';
-        
-        if (window.location.pathname === '/recipes') {
-          const cardSlug = sessionStorage.getItem('recipesRestoreCard');
-          const scrollY = sessionStorage.getItem('recipesRestoreY');
-          
-          if (cardSlug || scrollY) {
-            // Remove immediately to prevent double-restoration from other events
-            sessionStorage.removeItem('recipesRestoreCard');
-            sessionStorage.removeItem('recipesRestoreY');
-            
-            const fallbackY = scrollY ? parseInt(scrollY) : undefined;
-            await restoreScrollPosition(cardSlug, fallbackY);
-          }
-        }
-      });
-    </script>
+    <!--
+      Scroll restoration is deliberately not implemented here. ClientRouter
+      records the exact scroll position in history state and reapplies it on
+      back/forward, and it sets history.scrollRestoration itself. Pages built
+      without transitions (gallery albums) then still get the browser's own
+      native restoration. An earlier hand-rolled version anchored on the
+      nearest card and re-planted it at a fixed offset from the top, which
+      shifted the page every time you came back
+    -->
     <title>{title}</title>
     <style is:global>
+      :root {
+        /* Motion tokens ported from the HD Admin dashboard */
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --dur-fast: 150ms;
+        --dur: 300ms;
+        --dur-slow: 450ms;
+      }
+
+      @keyframes rise-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .rise {
+        /* backwards, not both: a lingering transform would trap position:fixed
+           overlays inside the animated box instead of the viewport */
+        animation: rise-in var(--dur-slow) var(--ease-out) backwards;
+        animation-delay: var(--rise-delay, 0ms);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .rise {
+          animation: none;
+        }
+      }
+
       html {
         scrollbar-gutter: stable;
         background-color: #ffffff;
@@ -481,7 +355,7 @@ if (resolveAuth) {
                       </div>
                     </div>
                   ) : (
-                    <a 
+                    <a
                       href={`/auth/login?next=${currentPath}`}
                       class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 ring-1 ring-gray-200 transition-colors flex items-center justify-center -mt-1.5"
                       title="Login with Google"
@@ -493,7 +367,49 @@ if (resolveAuth) {
                       </div>
                     </a>
                   )
-                ) : null}
+                ) : (
+                  <div class="relative" data-auth-shell>
+                    <a
+                      href={`/auth/login?next=${currentPath}`}
+                      class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 ring-1 ring-gray-200 transition-colors flex items-center justify-center -mt-1.5"
+                      title="Login with Google"
+                      data-auth-out
+                    >
+                      <div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                    </a>
+                    <div class="hidden" data-auth-in>
+                      <div class="relative group">
+                        <button
+                          class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 hover:border-gray-900 transition-colors focus:outline-none"
+                          aria-label="User menu"
+                        >
+                          <img data-auth-avatar class="w-full h-full object-cover hidden" referrerpolicy="no-referrer" alt="Profile" />
+                          <div data-auth-avatar-fallback class="w-full h-full bg-gray-50 flex items-center justify-center text-gray-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                        </button>
+                        <div class="fixed top-[60px] right-4 w-40 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
+                          <div class="px-4 py-2 border-b border-gray-50 mb-1">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Signed in as</p>
+                            <p data-auth-name class="text-xs font-medium text-gray-900 truncate"></p>
+                          </div>
+                          <a
+                            href="/auth/logout"
+                            class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            Logout
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -707,32 +623,26 @@ if (resolveAuth) {
 
     {!resolveAuth && (
       <script is:inline>
-        async function hydrateAuthShell() {
-          try {
-            const response = await fetch('/api/auth/me', { credentials: 'include' });
-            if (!response.ok) return;
+        function applyAuthState(data) {
+          const shells = document.querySelectorAll('[data-auth-shell]');
+          const adminLinks = document.querySelectorAll('[data-auth-admin]');
 
-            const data = await response.json();
-            const shell = document.querySelector('[data-auth-shell]');
-            if (!shell) return;
+          if (!data.authenticated) {
+            shells.forEach((shell) => {
+              shell.querySelector('[data-auth-in]')?.classList.add('hidden');
+              shell.querySelector('[data-auth-out]')?.classList.remove('hidden');
+            });
+            adminLinks.forEach((link) => link.classList.add('hidden'));
+            return;
+          }
 
-            const loggedOut = shell.querySelector('[data-auth-out]');
-            const loggedIn = shell.querySelector('[data-auth-in]');
-            const adminLink = document.querySelector('[data-auth-admin]');
+          adminLinks.forEach((link) => {
+            link.classList.toggle('hidden', !data.isAdmin);
+          });
 
-            if (!data.authenticated) {
-              loggedIn?.classList.add('hidden');
-              loggedOut?.classList.remove('hidden');
-              adminLink?.classList.add('hidden');
-              return;
-            }
-
-            loggedOut?.classList.add('hidden');
-            loggedIn?.classList.remove('hidden');
-
-            if (data.isAdmin) {
-              adminLink?.classList.remove('hidden');
-            }
+          shells.forEach((shell) => {
+            shell.querySelector('[data-auth-out]')?.classList.add('hidden');
+            shell.querySelector('[data-auth-in]')?.classList.remove('hidden');
 
             const nameEl = shell.querySelector('[data-auth-name]');
             if (nameEl) {
@@ -746,21 +656,66 @@ if (resolveAuth) {
               avatarImg.classList.remove('hidden');
               avatarFallback?.classList.add('hidden');
             }
+          });
+        }
+
+        // The last known auth state paints immediately (this script and the
+        // after-swap hook both run before the browser paints), then the
+        // network fetch reconciles quietly
+        function applyCachedAuth() {
+          try {
+            const raw = sessionStorage.getItem('auth_me_v1');
+            if (raw) applyAuthState(JSON.parse(raw));
+          } catch {}
+        }
+
+        async function hydrateAuthShell() {
+          try {
+            const response = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!response.ok) return;
+            const data = await response.json();
+            try {
+              sessionStorage.setItem('auth_me_v1', JSON.stringify(data));
+            } catch {}
+            applyAuthState(data);
           } catch (error) {
             console.error('Auth hydrate failed', error);
           }
         }
 
+        applyCachedAuth();
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', hydrateAuthShell);
         } else {
           hydrateAuthShell();
         }
 
+        document.addEventListener('astro:after-swap', applyCachedAuth);
         document.addEventListener('astro:page-load', hydrateAuthShell);
-        document.addEventListener('astro:after-swap', hydrateAuthShell);
       </script>
     )}
+    <script is:inline>
+      // Back buttons ([data-back]) prefer real history so scroll restoration
+      // kicks in; the href is the fallback for direct visits
+      document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        const back = target.closest('[data-back]');
+        if (!back) return;
+        // Astro's ClientRouter keeps its position in history.state.index;
+        // anything above 0 means there is an in-app page to go back to
+        const state = window.history.state;
+        const hasInAppHistory =
+          state && typeof state.index === 'number'
+            ? state.index > 0
+            : window.history.length > 1 && document.referrer.startsWith(window.location.origin);
+        if (hasInAppHistory) {
+          event.preventDefault();
+          window.history.back();
+        }
+      });
+    </script>
+
     <script is:inline>
       (function initMobileNav() {
         if (window.__mobileNavInitialized) return;

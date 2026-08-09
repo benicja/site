@@ -426,7 +426,17 @@ if (!album) {
 >
   <div class="gallery-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 sm:pb-12">
     <!-- Breadcrumbs -->
-    <nav class="flex mb-8 text-sm font-medium text-gray-500" aria-label="Breadcrumb">
+    <nav class="flex items-center gap-4 mb-8 text-sm font-medium text-gray-500" aria-label="Breadcrumb">
+      <a
+        href="/gallery"
+        class="inline-flex items-center justify-center w-12 h-12 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-gray-900 transition-colors shrink-0"
+        aria-label="Back to gallery"
+        data-back
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
       <ol class="inline-flex items-center space-x-1 md:space-x-3">
         <li class="inline-flex items-center">
           <a href="/gallery" class="hover:text-primary-600 transition-colors" data-astro-prefetch>Gallery</a>

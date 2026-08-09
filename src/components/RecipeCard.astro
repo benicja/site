@@ -118,7 +118,6 @@ const totalTime = data.prep_time + data.cook_time;
           <span class="text-xs md:text-sm font-light lowercase text-gray-600">{totalTime} min</span>
         </div>
         <div class="flex items-center gap-1">
-          <svg 
           <svg class="meta-heart-icon w-4 h-4 md:w-6 md:h-6 text-gray-400"
             fill="none"
             stroke="currentColor"
@@ -315,6 +314,25 @@ const totalTime = data.prep_time + data.cook_time;
             const error = await res.json();
             throw new Error(error.error || 'Failed to heart');
           }
+
+          // Keep the cached page state in sync so the next visit paints this
+          // heart correctly instead of reverting until the fresh fetch lands
+          try {
+            const raw = localStorage.getItem('recipes_layout_v2');
+            if (raw) {
+              const layout = JSON.parse(raw);
+              layout.userHearts = layout.userHearts || [];
+              layout.hearts = layout.hearts || {};
+              if (nowHearted) {
+                if (!layout.userHearts.includes(slug)) layout.userHearts.push(slug);
+                layout.hearts[slug] = (layout.hearts[slug] || 0) + 1;
+              } else {
+                layout.userHearts = layout.userHearts.filter((s: string) => s !== slug);
+                layout.hearts[slug] = Math.max(0, (layout.hearts[slug] || 0) - 1);
+              }
+              localStorage.setItem('recipes_layout_v2', JSON.stringify(layout));
+            }
+          } catch {}
         } catch (err) {
           console.error('Hearting failed, reverting:', err);
           // Revert UI on failure - defer to next frame as well for consistency
@@ -334,48 +352,4 @@ const totalTime = data.prep_time + data.cook_time;
   document.addEventListener('astro:after-swap', initHearts);
   document.addEventListener('astro:page-load', initHearts);
 
-  // Ensure recipe links navigate properly with timeout fallback
-  function initRecipeLinks() {
-    const recipeLinks = document.querySelectorAll('.recipe-link');
-    
-    recipeLinks.forEach(link => {
-      if ((link as any)._navigationHandled) return;
-      (link as any)._navigationHandled = true;
-      
-      link.addEventListener('click', () => {
-        // Save scroll position before navigating
-        if (window.location.pathname === '/recipes') {
-          sessionStorage.setItem('recipesScrollY', window.scrollY.toString());
-        }
-        
-        const href = (link as HTMLAnchorElement).href;
-        let navigationCompleted = false;
-        
-        // Mark when page load completes
-        const onPageLoad = () => {
-          navigationCompleted = true;
-          document.removeEventListener('astro:page-load', onPageLoad);
-        };
-        
-        document.addEventListener('astro:page-load', onPageLoad);
-        
-        // Fallback: if navigation hasn't completed after 3 seconds, force it
-        const timeoutId = setTimeout(() => {
-          if (!navigationCompleted) {
-            console.warn('Recipe navigation timeout, forcing navigation');
-            window.location.href = href;
-          }
-        }, 3000);
-        
-        // If navigation completes normally, clear the timeout
-        document.addEventListener('astro:after-swap', () => {
-          clearTimeout(timeoutId);
-        }, { once: true });
-      });
-    });
-  }
-  
-  initRecipeLinks();
-  document.addEventListener('astro:after-swap', initRecipeLinks);
-  document.addEventListener('astro:page-load', initRecipeLinks);
 </script>

@@ -1,0 +1,47 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Page not found" resolveAuth={false}>
+  <script is:inline>
+    // A freshly created recipe 404s until the rebuild deploys. If we hold an
+    // optimistic cache for this slug, bounce to the ghost route instead of
+    // showing a dead end.
+    (function () {
+      const match = window.location.pathname.match(/^\/recipes\/([^\/]+)\/?$/);
+      if (!match || match[1] === 'pending') return;
+      const slug = decodeURIComponent(match[1]);
+      const raw = localStorage.getItem('recipe_pending_v1_' + slug);
+      if (!raw) return;
+      try {
+        const { timestamp } = JSON.parse(raw);
+        if (Date.now() - timestamp < 10 * 60 * 1000) {
+          window.location.replace('/recipes/pending/' + encodeURIComponent(slug));
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <div class="max-w-2xl mx-auto px-4 py-32 text-center">
+    <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400">404</p>
+    <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">Page not found</h1>
+    <p class="mt-4 text-gray-500 font-light">
+      The page you're looking for doesn't exist or may have been moved.
+    </p>
+    <div class="mt-10 flex items-center justify-center gap-4">
+      <a
+        href="/"
+        class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-700 transition-colors"
+      >
+        Home
+      </a>
+      <a
+        href="/recipes"
+        class="inline-flex items-center justify-center px-6 py-3 rounded-full border border-gray-200 text-gray-900 text-xs font-bold uppercase tracking-[0.2em] hover:border-gray-900 transition-colors"
+      >
+        Recipes
+      </a>
+    </div>
+  </div>
+</Layout>
