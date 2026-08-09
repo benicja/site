@@ -20,11 +20,6 @@ const totalTime = data.prep_time + data.cook_time;
 <style>
   .heart-button {
     -webkit-tap-highlight-color: transparent !important;
-    outline: none !important;
-  }
-  .heart-button:focus, .heart-button:active {
-    outline: none !important;
-    box-shadow: none !important;
   }
 
   @keyframes heart-burst {
@@ -43,7 +38,7 @@ const totalTime = data.prep_time + data.cook_time;
   }
 </style>
 
-<article class="group relative bg-[#ffffff] border border-gray-100 rounded-2xl overflow-hidden flex flex-col h-full" data-recipe-slug={slug} data-recipe-title={data.title}>
+<article class="group relative bg-[#ffffff] rounded-2xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-300" data-recipe-slug={slug} data-recipe-title={data.title}>
   <!-- Recipe Image -->
   <div class="aspect-[16/10] overflow-hidden bg-white relative">
     <img 
@@ -60,7 +55,11 @@ const totalTime = data.prep_time + data.cook_time;
         </svg>
       </div>
     )}
-    
+
+    {data.featured_image && (
+      <div class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/25 to-transparent pointer-events-none z-10"></div>
+    )}
+
     <!-- Add Button and Category Overlay -->
     <div class="absolute top-4 left-4 z-20 flex items-center gap-2 md:flex">
       <AddToShoppingListIconButton ingredients={data.ingredients} className="w-8 h-8" />
@@ -91,7 +90,7 @@ const totalTime = data.prep_time + data.cook_time;
           {data.category}
         </a>
       </div>
-      <p class="hidden md:block text-gray-500 text-sm font-light leading-relaxed md:line-clamp-2 mb-3 text-center w-full">
+      <p class="hidden md:block text-gray-500 text-sm leading-relaxed md:line-clamp-2 mb-3 text-center w-full">
         {data.description}
       </p>
       <style is:global>
@@ -110,7 +109,7 @@ const totalTime = data.prep_time + data.cook_time;
     
     <!-- Recipe Meta -->
     <div class="pt-2 flex items-center justify-center -ml-4">
-      <div class="flex items-center gap-4 text-[9px] md:text-[11px] font-bold uppercase tracking-widest text-gray-400">
+      <div class="flex items-center gap-4 text-[9px] md:text-[11px] font-bold uppercase tracking-widest text-gray-500">
         <div class="flex items-center gap-1">
           <svg class="w-4 h-4 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -118,7 +117,7 @@ const totalTime = data.prep_time + data.cook_time;
           <span class="text-xs md:text-sm font-light lowercase text-gray-600">{totalTime} min</span>
         </div>
         <div class="flex items-center gap-1">
-          <svg class="meta-heart-icon w-4 h-4 md:w-6 md:h-6 text-gray-400"
+          <svg class="meta-heart-icon w-4 h-4 md:w-6 md:h-6 text-gray-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -141,7 +140,7 @@ const totalTime = data.prep_time + data.cook_time;
       data-user={user ? 'true' : 'false'}
     >
       <svg 
-        class={`top-heart-icon w-8 h-8 ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'fill-none stroke-white text-white'}`} 
+        class={`top-heart-icon w-8 h-8 drop-shadow-[0_1px_5px_rgba(0,0,0,0.45)] ${isHearted ? 'fill-red-500 stroke-red-500 text-red-500' : 'fill-none stroke-white text-white'}`}
         viewBox="0 0 24 24"
         fill={isHearted ? 'currentColor' : 'none'}
         stroke="currentColor"

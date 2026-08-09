@@ -110,7 +110,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
             {['Albums', 'Itinerary'].map(view => (
               <button
                 type="button"
-                class="filter-btn px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-100 select-none data-[active=true]:bg-gray-50 data-[active=true]:text-gray-950 data-[active=true]:border-gray-950 [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-400"
+                class="filter-btn px-4 py-1.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-600 transition-all duration-100 select-none data-[active=true]:bg-[#c2410c]/5 data-[active=true]:text-[#c2410c] data-[active=true]:border-[#c2410c] [&:not([data-active=true])]:hover:text-gray-900 [&:not([data-active=true])]:hover:border-gray-400"
                 data-filter="gallery-view"
                 data-value={view.toLowerCase()}
                 data-active={view === 'Albums' ? 'true' : 'false'}
@@ -142,7 +142,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
               {albumsWithDates.map(({ album }) => (
                 <a 
                   href={`/gallery/${album.google_album_id}`}
-                  class="group flex flex-col gallery-item bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-gray-950 transition-all duration-700 ease-out"
+                  class="group flex flex-col gallery-item bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-500 ease-out"
                   data-title={album.title.toLowerCase()}
                 >
                   <div class="aspect-square overflow-hidden relative">
@@ -153,6 +153,7 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                       loading="lazy"
                     />
                     <div class="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors duration-500" />
+                    <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent pointer-events-none"></div>
 
                     <!-- Photo Count Badge -->
                     <div class="absolute bottom-4 right-4 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px] uppercase tracking-[0.2em] font-bold text-white transition-opacity duration-500">
@@ -162,10 +163,10 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                   
                   <div class="px-5 md:px-8 pt-2 pb-3 md:pt-3 md:pb-5 flex flex-col flex-1 justify-center text-center">
                     <div class="flex flex-col items-center gap-1 md:gap-2">
-                      <h3 class="text-lg md:text-xl font-serif font-medium text-gray-900 group-hover:text-primary-600 transition-colors duration-300 m-0 leading-tight">
+                      <h3 class="text-lg md:text-xl font-serif font-medium text-gray-900 group-hover:text-[#c2410c] transition-colors duration-300 m-0 leading-tight">
                         {getDisplayTitle(album.title)}
                       </h3>
-                      <p class="text-[10px] uppercase tracking-[0.2em] text-gray-400 font-bold">
+                      <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
                         {getDisplayDate(album.title, album.created_at)}
                       </p>
                     </div>
