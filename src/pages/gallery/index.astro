@@ -102,21 +102,6 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
       </div>
     )}
 
-    {needsApproval && accessRequestStatus !== 'pending' && (
-      <div class="mb-8 p-6 bg-white border border-gray-100 rounded-3xl flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
-        <div>
-          <p class="font-serif text-xl mb-1">You're signed in, but not approved yet</p>
-          <p class="text-sm text-gray-500">Request access and we'll review it.</p>
-        </div>
-        <a
-          href="/gallery/request-access"
-          class="shrink-0 inline-flex items-center justify-center px-8 py-3.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-xs font-bold tracking-widest uppercase"
-        >
-          Request access
-        </a>
-      </div>
-    )}
-
     <!-- Gallery Content -->
     <div class="space-y-6">
         {/* Search + View Toggle */}

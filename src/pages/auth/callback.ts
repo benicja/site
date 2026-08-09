@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getGoogleClient, isEmailApproved, createUserSession, getUserFromSession, SESSION_COOKIE } from '../../lib/auth';
+import { getGoogleClient, createUserSession, getUserFromSession, SESSION_COOKIE } from '../../lib/auth';
 import { OAuth2RequestError } from 'arctic';
 
 export const prerender = false;
@@ -127,9 +127,6 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       return redirect('/gallery?linked=success');
     }
 
-    // Check if email is approved
-    const approved = await isEmailApproved(userInfo.email);
-
     // Get target redirect
     const targetRedirect = cookies.get('auth_redirect')?.value || '/gallery';
 
@@ -138,17 +135,9 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     cookies.delete('auth_redirect', { path: '/' });
     cookies.delete('oauth_retry', { path: '/' });
 
-    if (!approved) {
-      // A share link works for signed-in users without overall approval, so
-      // let those through to the album page (which validates the token).
-      // Everyone else lands on the access request page
-      const isShareLink = targetRedirect.startsWith('/gallery/') && targetRedirect.includes('share=');
-      if (!isShareLink) {
-        return redirect('/gallery/request-access');
-      }
-    }
-
-    // Redirect to target or gallery
+    // Always return to where the user was. Approval is enforced by the pages
+    // themselves; the request-access page is only reachable from an album's
+    // no-access screen
     return redirect(targetRedirect);
     
   } catch (error) {

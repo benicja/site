@@ -1,18 +1,26 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../lib/auth';
+
+const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
+const user = sessionId ? await getUserFromSession(sessionId) : null;
+const approvedUser = user ? await getApprovedUser(user.user_email) : null;
+const isAdmin = approvedUser?.role === 'admin';
 ---
 
 <Layout
   title="Benicja's Kitchen"
   description="Family recipes and photo gallery - a place to share our favorite moments and meals"
+  user={user}
+  isAdmin={isAdmin}
 >
   <!-- Hero Section -->
   <section class="relative h-[calc(100vh-80px)] flex items-center justify-center bg-white overflow-hidden">
     <div class="absolute inset-0 z-0">
       <div class="absolute inset-0 bg-gradient-to-b from-white/10 via-white/40 to-white/90 z-10"></div>
-      <img 
-        src="/api/gallery/image?url=https%3A%2F%2Flh3.googleusercontent.com%2Fpw%2FAP1GczPmbNVSU1XbW0Flgwb2JnquXiI_FdghLT1NUmqR3hACBrAHYMwwdc1RJZopetmRtnJ0Q8Iw2c1hxizuhMu6seGTeQBXEZvpr10zr5XtQcyAm7EW_T00Y-FTm-shg0BEY99DupkkMpxiD3EPlwTRBpWuxg&w=2000" 
-        class="w-full h-full object-cover opacity-20 scale-105" 
+      <img
+        src="/images/hero-kitchen.jpg"
+        class="w-full h-full object-cover opacity-20 scale-105"
         style="object-position: center 25%"
         alt="Kitchen backdrop"
       />
@@ -33,12 +41,20 @@ import Layout from '../layouts/Layout.astro';
         >
           Browse Recipes
         </a>
-        <a 
-          href="/gallery" 
+        <a
+          href="/gallery"
           class="px-8 py-4 bg-white border-2 border-gray-200 text-gray-900 rounded-full font-medium text-lg hover:border-gray-900 transition-all transform hover:scale-105"
         >
           View Gallery
         </a>
+        {isAdmin && (
+          <a
+            href="/portal"
+            class="px-8 py-4 bg-white border-2 border-gray-200 text-gray-900 rounded-full font-medium text-lg hover:border-gray-900 transition-all transform hover:scale-105"
+          >
+            Admin
+          </a>
+        )}
       </div>
     </div>
   </section>
