@@ -107,6 +107,19 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
         </div>
       </section>
 
+      <script is:inline define:vars={{ slug }}>
+        // Pre-paint: the static build renders 0 hearts, so show the cached
+        // count from the last page-data fetch before the hero ever paints.
+        // The fresh fetch afterwards reconciles quietly
+        try {
+          const cachedLayout = JSON.parse(localStorage.getItem('recipes_layout_v2') || 'null');
+          const countEl = document.querySelector('.hero-rating-count');
+          if (countEl && cachedLayout && cachedLayout.hearts && cachedLayout.hearts[slug] != null) {
+            countEl.textContent = String(cachedLayout.hearts[slug]);
+          }
+        } catch (e) {}
+      </script>
+
       <section class="recipe-media rise" style="--rise-delay: 60ms;">
         <div class="hero-media">
           <img 
@@ -214,6 +227,21 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
     warmRecipesList();
     document.addEventListener('astro:page-load', warmRecipesList);
 
+    // Client-side swaps replace the DOM with the static 0, and the inline
+    // pre-paint script doesn't re-run then, so re-apply the cached count
+    // before the swapped page paints
+    function applyCachedHeroCount() {
+      try {
+        const countEl = document.querySelector('.hero-rating-count');
+        const slug = window.location.pathname.split('/').filter(Boolean).pop();
+        if (!countEl || !slug) return;
+        const layout = JSON.parse(localStorage.getItem('recipes_layout_v2') || 'null');
+        if (layout?.hearts && layout.hearts[slug] != null) {
+          countEl.textContent = String(layout.hearts[slug]);
+        }
+      } catch {}
+    }
+
     async function hydrateHearts() {
       const countEl = document.querySelector('.hero-rating-count');
       const page = document.querySelector('.recipe-page');
@@ -227,6 +255,7 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
       countEl.textContent = String(data.hearts[slug] || 0);
     }
 
+    document.addEventListener('astro:after-swap', applyCachedHeroCount);
     hydrateHearts();
     document.addEventListener('astro:page-load', hydrateHearts);
   </script>
