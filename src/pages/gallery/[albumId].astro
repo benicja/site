@@ -4,32 +4,56 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { getAlbumById, getPhotosByAlbumId, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
+import { getAlbumIdForToken } from '../../lib/galleryAccess';
 import AlbumCommentSection from '../../components/AlbumCommentSection';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
 const { albumId } = Astro.params;
 
-// Check authentication
+if (!albumId) {
+  return Astro.redirect('/gallery');
+}
+
+// Album contents are never for search engines, whatever the access outcome
+Astro.response.headers.set('X-Robots-Tag', 'noindex');
+
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
 const user = sessionId ? await getUserFromSession(sessionId) : null;
 const approvedUser = user ? await getApprovedUser(user.user_email) : null;
 const isApproved = !!approvedUser;
 const isAdmin = approvedUser?.role === 'admin';
 
-if (!user || (!isApproved && !isAdmin)) {
-  return Astro.redirect('/gallery');
-}
-
-if (!albumId) {
-  return Astro.redirect('/gallery');
+// A valid share token grants this one album to any signed-in user
+const shareParam = Astro.url.searchParams.get('share');
+let shareAccess = false;
+if (shareParam) {
+  const tokenAlbum = await getAlbumIdForToken(shareParam);
+  shareAccess = tokenAlbum === albumId;
 }
 
 const album = await getAlbumById(albumId);
-const photos = await getPhotosByAlbumId(albumId);
-
 if (!album) {
   return Astro.redirect('/gallery');
 }
+
+// Three outcomes: view the album, sign in first, or no access
+const viewState: 'view' | 'signin' | 'noaccess' =
+  user && (isApproved || shareAccess) ? 'view' : !user ? 'signin' : 'noaccess';
+
+// Keep the share token through the login round-trip
+const nextUrl = shareParam
+  ? `${Astro.url.pathname}?share=${encodeURIComponent(shareParam)}`
+  : Astro.url.pathname;
+const loginHref = `/auth/login?next=${encodeURIComponent(nextUrl)}`;
+
+const photos = viewState === 'view' ? await getPhotosByAlbumId(albumId) : [];
+
+// Media requests from share-based viewers must carry the token; approved
+// members authorise by session alone
+const shareSuffix =
+  viewState === 'view' && !isApproved && shareParam
+    ? `&share=${encodeURIComponent(shareParam)}`
+    : '';
 ---
 
 <style is:global>
@@ -424,6 +448,56 @@ if (!album) {
   isAdmin={isAdmin}
   enableTransitions={false}
 >
+  {viewState === 'signin' && (
+    <div class="max-w-2xl mx-auto px-4 py-32 text-center">
+      <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400">Private album</p>
+      <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">
+        {getDisplayTitle(album.title)}
+      </h1>
+      <p class="mt-4 text-gray-500 font-light">
+        This album is private. Sign in with Google to continue.
+      </p>
+      <div class="mt-10">
+        <a
+          href={loginHref}
+          data-astro-prefetch="false"
+          class="inline-flex items-center justify-center px-8 py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-700 transition-colors"
+        >
+          Sign in to view
+        </a>
+      </div>
+    </div>
+  )}
+
+  {viewState === 'noaccess' && (
+    <div class="max-w-2xl mx-auto px-4 py-32 text-center">
+      <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400">Private album</p>
+      <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">
+        You don't have access to this album
+      </h1>
+      <p class="mt-4 text-gray-500 font-light">
+        {shareParam
+          ? 'This share link is no longer valid. Ask the person who sent it for a fresh one, or request full gallery access.'
+          : 'Your account isn’t approved for the gallery yet. You can request access below.'}
+      </p>
+      <div class="mt-10 flex items-center justify-center gap-4">
+        <a
+          href="/gallery/request-access"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-700 transition-colors"
+        >
+          Request access
+        </a>
+        <a
+          href="/gallery"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-full border border-gray-200 text-gray-900 text-xs font-bold uppercase tracking-[0.2em] hover:border-gray-900 transition-colors"
+        >
+          Gallery
+        </a>
+      </div>
+    </div>
+  )}
+
+  {viewState === 'view' && (
   <div class="gallery-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 sm:pb-12">
     <!-- Breadcrumbs -->
     <nav class="flex items-center gap-4 mb-8 text-sm font-medium text-gray-500" aria-label="Breadcrumb">
@@ -453,12 +527,142 @@ if (!album) {
     </nav>
 
     <!-- Header -->
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">{getDisplayTitle(album.title)}</h1>
-      <p class="text-sm text-gray-600">
-        {photos.length} items • {getDisplayDate(album.title, album.created_at)}
-      </p>
+    <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">{getDisplayTitle(album.title)}</h1>
+        <p class="text-sm text-gray-600">
+          {photos.length} items • {getDisplayDate(album.title, album.created_at)}
+        </p>
+      </div>
+      {isAdmin && (
+        <div class="w-full sm:w-auto">
+          <button
+            type="button"
+            id="share-album-btn"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-700 hover:border-gray-900 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684zm0-9.316a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" />
+            </svg>
+            Share album
+          </button>
+          <div id="share-album-panel" class="hidden mt-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm w-full sm:w-[420px]">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Share link</p>
+            <p class="text-xs text-gray-500 mb-3">
+              Anyone with this link can view this album after signing in with Google,
+              even without full gallery access. Rotating invalidates old links.
+            </p>
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                id="share-album-link"
+                readonly
+                class="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-mono"
+              />
+              <button type="button" id="share-album-copy" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gray-700 transition-colors">
+                Copy
+              </button>
+            </div>
+            <div class="flex items-center gap-4 mt-3">
+              <button type="button" id="share-album-rotate" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-colors">
+                Rotate link
+              </button>
+              <button type="button" id="share-album-disable" class="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors">
+                Disable sharing
+              </button>
+            </div>
+            <p id="share-album-status" class="hidden mt-2 text-xs text-gray-500"></p>
+          </div>
+        </div>
+      )}
     </div>
+
+    {isAdmin && (
+      <script is:inline define:vars={{ albumId }}>
+        (function () {
+          const btn = document.getElementById('share-album-btn');
+          const panel = document.getElementById('share-album-panel');
+          const linkInput = document.getElementById('share-album-link');
+          const copyBtn = document.getElementById('share-album-copy');
+          const rotateBtn = document.getElementById('share-album-rotate');
+          const disableBtn = document.getElementById('share-album-disable');
+          const status = document.getElementById('share-album-status');
+          if (!btn || !panel || !linkInput) return;
+
+          const setStatus = (msg) => {
+            if (!status) return;
+            status.textContent = msg;
+            status.classList.toggle('hidden', !msg);
+          };
+
+          const call = async (action) => {
+            const res = await fetch('/api/gallery/share-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ album_id: albumId, action })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Request failed');
+            return data;
+          };
+
+          const showLink = (token) => {
+            linkInput.value = `${window.location.origin}/gallery/${encodeURIComponent(albumId)}?share=${token}`;
+          };
+
+          btn.addEventListener('click', async () => {
+            if (!panel.classList.contains('hidden')) {
+              panel.classList.add('hidden');
+              return;
+            }
+            try {
+              setStatus('');
+              const data = await call('enable');
+              showLink(data.token);
+              panel.classList.remove('hidden');
+            } catch (err) {
+              panel.classList.remove('hidden');
+              linkInput.value = '';
+              setStatus(err.message);
+            }
+          });
+
+          copyBtn?.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(linkInput.value);
+              setStatus('Copied to clipboard');
+            } catch {
+              linkInput.select();
+              document.execCommand('copy');
+              setStatus('Copied');
+            }
+          });
+
+          rotateBtn?.addEventListener('click', async () => {
+            if (!confirm('Rotate the share link? Everyone using the old link loses access.')) return;
+            try {
+              const data = await call('rotate');
+              showLink(data.token);
+              setStatus('New link created. Old links no longer work');
+            } catch (err) {
+              setStatus(err.message);
+            }
+          });
+
+          disableBtn?.addEventListener('click', async () => {
+            if (!confirm('Disable sharing for this album? The link stops working immediately.')) return;
+            try {
+              await call('disable');
+              linkInput.value = '';
+              panel.classList.add('hidden');
+              setStatus('');
+            } catch (err) {
+              setStatus(err.message);
+            }
+          });
+        })();
+      </script>
+    )}
 
     <!-- Loading Spinner -->
     <div id="loading-spinner" class="flex justify-center items-center py-20">
@@ -480,8 +684,8 @@ if (!album) {
       {photos.map((photo) => {
         const encodedUrl = encodeURIComponent(photo.image_url);
         const isVideo = photo.media_type === 'video';
-        const fullUrl = isVideo ? `/api/gallery/video?url=${encodedUrl}` : `/api/gallery/image?url=${encodedUrl}&w=1000`;
-        const thumbUrl = `/api/gallery/image?url=${encodedUrl}&w=800`;
+        const fullUrl = isVideo ? `/api/gallery/video?url=${encodedUrl}${shareSuffix}` : `/api/gallery/image?url=${encodedUrl}&w=1000${shareSuffix}`;
+        const thumbUrl = `/api/gallery/image?url=${encodedUrl}&w=800${shareSuffix}`;
         const videoData = isVideo
           ? JSON.stringify({
               source: [{ src: fullUrl, type: 'video/mp4' }],
@@ -524,6 +728,7 @@ if (!album) {
       />
     </div>
   </div>
+  )}
 </Layout>
 
 <script>

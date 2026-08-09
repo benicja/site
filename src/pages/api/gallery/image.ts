@@ -1,8 +1,33 @@
 import type { APIRoute } from 'astro';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../../lib/auth';
+import { getAlbumIdForToken, isKnownMediaUrl, isMediaUrlInAlbum } from '../../../lib/galleryAccess';
 
-export const GET: APIRoute = async ({ url }) => {
+export const prerender = false;
+
+// Photos are private. Serving one requires a signed-in user who is either an
+// approved member, or presenting a valid share token for the album this exact
+// URL belongs to. The DB membership check also stops the proxy being used as
+// an open relay for arbitrary Google URLs
+async function authorise(cookies: any, decodedUrl: string, shareToken: string | null): Promise<boolean> {
+  const sessionId = cookies.get(SESSION_COOKIE)?.value;
+  const user = sessionId ? await getUserFromSession(sessionId) : null;
+  if (!user) return false;
+
+  if (shareToken) {
+    const albumId = await getAlbumIdForToken(shareToken);
+    if (albumId && (await isMediaUrlInAlbum(albumId, decodedUrl))) return true;
+  }
+
+  const approvedUser = await getApprovedUser(user.user_email);
+  if (approvedUser && (await isKnownMediaUrl(decodedUrl))) return true;
+
+  return false;
+}
+
+export const GET: APIRoute = async ({ url, cookies }) => {
   const imageUrl = url.searchParams.get('url');
   const width = url.searchParams.get('w') || '800';
+  const shareToken = url.searchParams.get('share');
 
   if (!imageUrl) {
     return new Response('Missing image URL', { status: 400 });
@@ -11,6 +36,11 @@ export const GET: APIRoute = async ({ url }) => {
   try {
     // Decode the URL
     const decodedUrl = decodeURIComponent(imageUrl);
+
+    if (!(await authorise(cookies, decodedUrl, shareToken))) {
+      return new Response('Not authorised', { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    }
+
     const imageWithSizing = `${decodedUrl}=w${width}`;
 
     // Fetch from Google
@@ -30,8 +60,8 @@ export const GET: APIRoute = async ({ url }) => {
     return new Response(buffer, {
       headers: {
         'Content-Type': response.headers.get('content-type') || 'image/jpeg',
-        'Cache-Control': 'public, max-age=604800', // Cache for 7 days
-        'Access-Control-Allow-Origin': '*',
+        // private: the browser may cache for a week, shared caches may not
+        'Cache-Control': 'private, max-age=604800',
       },
     });
   } catch (error) {

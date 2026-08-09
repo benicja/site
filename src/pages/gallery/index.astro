@@ -6,7 +6,8 @@ import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/a
 import { getAlbums, type Album, getAlbumDate, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
 import { supabaseAdmin } from '../../lib/supabase';
 
-// Check if user is authenticated
+// The album list is public: anyone can browse titles and dates. Cover photos
+// and album contents stay behind sign-in + approval (or a share link)
 let user = null;
 let isAdmin = false;
 let isApproved = false;
@@ -25,7 +26,6 @@ try {
   isAdmin = approvedUser?.role === 'admin';
   needsApproval = !!user && !isApproved && !isAdmin;
 
-  // If user is authenticated but not approved, send them to request access
   if (needsApproval) {
     const { data: accessRequest } = await supabaseAdmin
       .from('access_requests')
@@ -36,18 +36,15 @@ try {
       .maybeSingle();
 
     accessRequestStatus = accessRequest?.status ?? null;
-
-    if (!accessRequestStatus || accessRequestStatus === 'denied') {
-      return Astro.redirect('/gallery/request-access');
-    }
   }
 
-  // Fetch albums from Supabase
-  albums = user && (isApproved || isAdmin) ? await getAlbums() : [];
+  albums = await getAlbums();
 } catch (e) {
   console.error('Gallery page error:', e);
   error = e instanceof Error ? e.message : 'Unknown error occurred';
 }
+
+const canViewMedia = isApproved || isAdmin;
 
 const albumsWithDates = albums
   .map((album) => {
@@ -88,8 +85,8 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
   }
 </style>
 
-<Layout title="Family Gallery" description="Private family photo albums - sign in required" user={user} isAdmin={isAdmin} enableTransitions={false}>
-  <div class={`gallery-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${!user ? 'h-[calc(100vh-80px)] flex flex-col justify-center' : 'pt-6 pb-4 sm:pb-10'}`}>
+<Layout title="Family Gallery" description="Our family photo albums" user={user} isAdmin={isAdmin} enableTransitions={false}>
+  <div class="gallery-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 sm:pb-10">
     {error && (
       <div class="mb-12 p-6 bg-red-50 border border-red-100 text-red-800 rounded-2xl">
         <p class="font-serif text-xl mb-2">Something went wrong</p>
@@ -97,63 +94,54 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
       </div>
     )}
 
-    {!user ? (
-      <!-- Sign In Section -->
-      <div class="text-center">
-        <div class="max-w-md mx-auto">
-          <h2 class="text-3xl font-serif mb-6">Access Required</h2>
-          <p class="text-gray-500 mb-10 leading-relaxed">
-            To protect our family's privacy, this gallery is only accessible to approved members.
-          </p>
-          
-          <a 
-            href={`/auth/login?next=${Astro.url.pathname}`} 
-            class="inline-flex items-center gap-3 px-10 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-sm font-bold tracking-widest uppercase"
-          >
-            <svg class="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" opacity="0.8"/>
-            </svg>
-            Sign in with Google
-          </a>
-          
-          <p class="mt-8 text-sm text-gray-400">
-            Don't have access? <a href="/gallery/request-access" class="text-gray-900 font-bold border-b border-gray-900">Request access</a>
+    {!user && (
+      <div class="mb-8 p-6 md:p-8 bg-white border border-gray-100 rounded-3xl flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <h2 class="text-2xl font-serif mb-2">A private family gallery</h2>
+          <p class="text-gray-500 text-sm leading-relaxed">
+            Browse the albums below. To open one and see the photos, sign in with Google.
           </p>
         </div>
+        <a
+          href={`/auth/login?next=${Astro.url.pathname}`}
+          data-astro-prefetch="false"
+          class="shrink-0 inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-xs font-bold tracking-widest uppercase"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" opacity="0.8"/>
+          </svg>
+          Sign in
+        </a>
       </div>
-    ) : accessRequestStatus === 'pending' ? (
-      <!-- Pending Approval Section -->
-      <div class="text-center">
-        <div class="max-w-md mx-auto">
-          <h2 class="text-3xl font-serif mb-6">Request Received</h2>
-          <p class="text-gray-500 mb-6 leading-relaxed">
-            Thanks for your request. Please wait to hear from us once it's been reviewed.
-          </p>
-          <p class="text-xs font-bold uppercase tracking-widest text-gray-400">
-            We'll email you when your status changes.
-          </p>
+    )}
+
+    {needsApproval && accessRequestStatus === 'pending' && (
+      <div class="mb-8 p-6 bg-white border border-gray-100 rounded-3xl text-center">
+        <p class="font-serif text-xl mb-1">Request received</p>
+        <p class="text-sm text-gray-500">
+          Thanks for your request. We'll email you once it's been reviewed.
+        </p>
+      </div>
+    )}
+
+    {needsApproval && accessRequestStatus !== 'pending' && (
+      <div class="mb-8 p-6 bg-white border border-gray-100 rounded-3xl flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-center md:text-left">
+        <div>
+          <p class="font-serif text-xl mb-1">You're signed in, but not approved yet</p>
+          <p class="text-sm text-gray-500">Request access and we'll review it.</p>
         </div>
+        <a
+          href="/gallery/request-access"
+          class="shrink-0 inline-flex items-center justify-center px-8 py-3.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-xs font-bold tracking-widest uppercase"
+        >
+          Request access
+        </a>
       </div>
-    ) : needsApproval ? (
-      <!-- Request Access Fallback -->
-      <div class="text-center">
-        <div class="max-w-md mx-auto">
-          <h2 class="text-3xl font-serif mb-6">Request Access</h2>
-          <p class="text-gray-500 mb-8 leading-relaxed">
-            This gallery is private. Ask for access and we will review your request.
-          </p>
-          <a 
-            href="/gallery/request-access"
-            class="inline-flex items-center gap-3 px-10 py-4 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all text-sm font-bold tracking-widest uppercase"
-          >
-            Request access
-          </a>
-        </div>
-      </div>
-    ) : (
-      <!-- Gallery Content --> 
-      <div class="space-y-6">
+    )}
+
+    <!-- Gallery Content -->
+    <div class="space-y-6">
         {/* Search + View Toggle */}
         <div class="space-y-4">
           <div class="flex flex-wrap items-center gap-2" data-filter-group>
@@ -196,14 +184,22 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                   data-title={album.title.toLowerCase()}
                 >
                   <div class="aspect-square overflow-hidden relative">
-                    <img 
-                      src={`/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=1000`} 
-                      alt={album.title}
-                      class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
-                      loading="lazy"
-                    />
+                    {canViewMedia ? (
+                      <img
+                        src={`/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=1000`}
+                        alt={album.title}
+                        class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+                        <svg class="w-10 h-10 text-white/40 group-hover:text-white/60 transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                    )}
                     <div class="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors duration-500" />
-                    
+
                     <!-- Photo Count Badge -->
                     <div class="absolute bottom-4 right-4 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px] uppercase tracking-[0.2em] font-bold text-white transition-opacity duration-500">
                       {album.photo_count} Items
@@ -281,7 +277,6 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
           )}
         </div>
       </div>
-    )}
   </div>
 
   <script is:inline>

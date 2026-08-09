@@ -1,7 +1,30 @@
 import type { APIRoute } from 'astro';
+import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../../lib/auth';
+import { getAlbumIdForToken, isKnownMediaUrl, isMediaUrlInAlbum } from '../../../lib/galleryAccess';
 
-export const GET: APIRoute = async ({ request, url }) => {
+export const prerender = false;
+
+// Same authorisation as the image proxy: signed in, then approved membership
+// or a share token matching the album this exact URL belongs to
+async function authorise(cookies: any, decodedUrl: string, shareToken: string | null): Promise<boolean> {
+  const sessionId = cookies.get(SESSION_COOKIE)?.value;
+  const user = sessionId ? await getUserFromSession(sessionId) : null;
+  if (!user) return false;
+
+  if (shareToken) {
+    const albumId = await getAlbumIdForToken(shareToken);
+    if (albumId && (await isMediaUrlInAlbum(albumId, decodedUrl))) return true;
+  }
+
+  const approvedUser = await getApprovedUser(user.user_email);
+  if (approvedUser && (await isKnownMediaUrl(decodedUrl))) return true;
+
+  return false;
+}
+
+export const GET: APIRoute = async ({ request, url, cookies }) => {
   const baseUrl = url.searchParams.get('url');
+  const shareToken = url.searchParams.get('share');
 
   if (!baseUrl) {
     return new Response('Missing video URL', { status: 400 });
@@ -9,6 +32,11 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   try {
     const decodedUrl = decodeURIComponent(baseUrl);
+
+    if (!(await authorise(cookies, decodedUrl, shareToken))) {
+      return new Response('Not authorised', { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    }
+
     const videoUrl = `${decodedUrl}=dv`;
     const range = request.headers.get('range') || undefined;
     const wantsHead = request.method === 'HEAD';
@@ -51,8 +79,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       headers.set('Accept-Ranges', 'bytes');
     }
 
-    headers.set('Cache-Control', 'public, max-age=604800');
-    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Cache-Control', 'private, max-age=604800');
 
     return new Response(wantsHead ? null : response.body, {
       status: response.status,
