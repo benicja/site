@@ -342,16 +342,16 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
       </section>
 
       <!-- Albums/Recipes Toggle -->
-      <section>
+      <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12">
         <div class="flex items-center gap-4 mb-8">
-          <button 
+          <button
             id="toggle-albums-btn"
             class="toggle-content-btn px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full transition-colors"
             data-target="albums"
           >
             Albums ({albums.length})
           </button>
-          <button 
+          <button
             id="toggle-recipes-btn"
             class="toggle-content-btn px-6 py-2 bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-300 transition-colors"
             data-target="recipes"
@@ -360,16 +360,33 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
           </button>
         </div>
 
+        <div class="relative mb-6">
+          <input
+            type="text"
+            id="content-search"
+            placeholder="Search by title..."
+            class="w-full px-5 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-gray-600 font-normal text-black text-sm"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
         <!-- Current Albums List -->
         <div id="albums-section" class="content-section">
           <h2 class="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Current Albums</h2>
           <p class="text-xs text-gray-500 mb-4">Drag to reorder</p>
-          <div id="albums-list" class="space-y-4">
+          <div id="albums-list" class="space-y-4 pr-1" data-content-list>
             {albums.map(album => (
-              <div 
+              <div
                 draggable="true"
                 class="album-item flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors cursor-move"
                 data-album-id={album.google_album_id}
+                data-search={album.title.toLowerCase()}
               >
                 <div class="flex items-center gap-4 flex-1">
                   <div class="w-2 h-2 bg-gray-300 rounded-full flex-shrink-0"></div>
@@ -410,12 +427,13 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
               + Create New
             </button>
           </div>
-          <div id="recipes-list" class="space-y-4">
+          <div id="recipes-list" class="space-y-4 pr-1" data-content-list>
             {recipes.map(recipe => (
-              <div 
+              <div
                 draggable="true"
                 class="recipe-item flex items-center justify-between p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors cursor-move"
                 data-recipe-slug={recipe.slug}
+                data-search={`${recipe.data.title} ${String(recipe.data.category)}`.toLowerCase()}
               >
                 <div class="flex items-center gap-4 flex-1">
                   <div class="w-2 h-2 bg-gray-300 rounded-full flex-shrink-0"></div>
@@ -451,6 +469,61 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
             ))}
           </div>
         </div>
+
+        <script is:inline>
+          (function () {
+            // Search and six-item cap for the albums/recipes lists, matching
+            // the people panel. Tab switching itself stays in the main portal
+            // script; the cap is re-applied when a list becomes visible
+            // because heights are only measurable then
+            function capContentList(list) {
+              if (!list || list.dataset.capped === '1' || list.offsetParent === null) return;
+              const items = Array.from(list.children);
+              if (items.length > 6) {
+                const height = items[6].offsetTop - items[0].offsetTop;
+                if (height > 0) {
+                  list.style.maxHeight = height + 'px';
+                  list.style.overflowY = 'auto';
+                  list.dataset.capped = '1';
+                }
+              }
+            }
+
+            function capVisibleContentLists() {
+              document.querySelectorAll('[data-content-list]').forEach(capContentList);
+            }
+
+            function initContentPanel() {
+              const search = document.getElementById('content-search');
+              if (search && search.dataset.bound !== '1') {
+                search.dataset.bound = '1';
+                search.addEventListener('input', () => {
+                  const query = search.value.trim().toLowerCase();
+                  document.querySelectorAll('[data-content-list]').forEach((list) => {
+                    Array.from(list.children).forEach((row) => {
+                      const haystack = row.getAttribute('data-search') || '';
+                      row.classList.toggle('hidden', !!query && !haystack.includes(query));
+                    });
+                  });
+                });
+              }
+              capVisibleContentLists();
+            }
+
+            initContentPanel();
+            if (!window.__contentPanelHooked) {
+              window.__contentPanelHooked = true;
+              document.addEventListener('astro:page-load', initContentPanel);
+              // The main portal script shows the saved tab and handles toggle
+              // clicks; cap whichever list just became visible afterwards
+              document.addEventListener('click', (event) => {
+                if (event.target instanceof Element && event.target.closest('.toggle-content-btn')) {
+                  setTimeout(capVisibleContentLists, 0);
+                }
+              });
+            }
+          })();
+        </script>
 
         <!-- Recipe Edit Modal -->
         <div id="recipe-edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-x-hidden">
