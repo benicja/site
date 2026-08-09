@@ -581,10 +581,43 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
       } catch {}
     });
 
+    // Card images load lazily for a fast first paint, which used to mean a
+    // filter could surface a card whose image had never been fetched, so it
+    // popped in seconds after its neighbours. Warm the remaining images one
+    // at a time during idle so filtering always reveals cached images
+    function warmCardImages() {
+      const images = Array.from(
+        document.querySelectorAll('#recipes-grid img[loading="lazy"]')
+      ) as HTMLImageElement[];
+      let index = 0;
+      const next = () => {
+        if (index >= images.length) return;
+        const img = images[index++];
+        if (img.complete && img.naturalWidth > 0) {
+          next();
+          return;
+        }
+        const preload = new Image();
+        preload.onload = preload.onerror = () => setTimeout(next, 50);
+        preload.src = img.currentSrc || img.src;
+      };
+      next();
+    }
+
+    function scheduleImageWarm() {
+      if (!document.getElementById('recipes-grid')) return;
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(warmCardImages, { timeout: 3000 });
+      } else {
+        setTimeout(warmCardImages, 1500);
+      }
+    }
+
     // Re-initialize after view transitions
     document.addEventListener('astro:page-load', () => {
       initSearch();
       applyPageData();
+      scheduleImageWarm();
     });
   </script>
 </Layout>
