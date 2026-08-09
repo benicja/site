@@ -455,6 +455,16 @@ const existingShareToken =
 >
   {viewState === 'signin' && (
     <div class="max-w-2xl mx-auto px-4 py-32 text-center">
+      <a
+        href="/gallery"
+        class="inline-flex items-center justify-center w-12 h-12 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-gray-900 transition-colors mb-10"
+        aria-label="Back to gallery"
+        data-back
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
       <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400">Private album</p>
       <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">
         {getDisplayTitle(album.title)}
@@ -476,6 +486,16 @@ const existingShareToken =
 
   {viewState === 'noaccess' && (
     <div class="max-w-2xl mx-auto px-4 py-32 text-center">
+      <a
+        href="/gallery"
+        class="inline-flex items-center justify-center w-12 h-12 rounded-full border border-gray-200 bg-white text-gray-700 hover:border-gray-900 transition-colors mb-10"
+        aria-label="Back to gallery"
+        data-back
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
       <p class="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-400">Private album</p>
       <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">
         You don't have access to this album
