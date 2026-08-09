@@ -481,8 +481,8 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
             function capContentList(list) {
               if (!list || list.dataset.capped === '1' || list.offsetParent === null) return;
               const items = Array.from(list.children);
-              if (items.length > 6) {
-                const height = items[6].offsetTop - items[0].offsetTop;
+              if (items.length > 20) {
+                const height = items[20].offsetTop - items[0].offsetTop;
                 if (height > 0) {
                   list.style.maxHeight = height + 'px';
                   list.style.overflowY = 'auto';
