@@ -474,55 +474,28 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
 
         <script is:inline>
           (function () {
-            // Search and six-item cap for the albums/recipes lists, matching
-            // the people panel. Tab switching itself stays in the main portal
-            // script; the cap is re-applied when a list becomes visible
-            // because heights are only measurable then
-            function capContentList(list) {
-              if (!list || list.dataset.capped === '1' || list.offsetParent === null) return;
-              const items = Array.from(list.children);
-              if (items.length > 20) {
-                const height = items[20].offsetTop - items[0].offsetTop;
-                if (height > 0) {
-                  list.style.maxHeight = height + 'px';
-                  list.style.overflowY = 'auto';
-                  list.dataset.capped = '1';
-                }
-              }
-            }
-
-            function capVisibleContentLists() {
-              document.querySelectorAll('[data-content-list]').forEach(capContentList);
-            }
-
+            // Search for the albums/recipes lists, matching the people panel.
+            // These lists grow without a scroll cap; tab switching stays in
+            // the main portal script
             function initContentPanel() {
               const search = document.getElementById('content-search');
-              if (search && search.dataset.bound !== '1') {
-                search.dataset.bound = '1';
-                search.addEventListener('input', () => {
-                  const query = search.value.trim().toLowerCase();
-                  document.querySelectorAll('[data-content-list]').forEach((list) => {
-                    Array.from(list.children).forEach((row) => {
-                      const haystack = row.getAttribute('data-search') || '';
-                      row.classList.toggle('hidden', !!query && !haystack.includes(query));
-                    });
+              if (!search || search.dataset.bound === '1') return;
+              search.dataset.bound = '1';
+              search.addEventListener('input', () => {
+                const query = search.value.trim().toLowerCase();
+                document.querySelectorAll('[data-content-list]').forEach((list) => {
+                  Array.from(list.children).forEach((row) => {
+                    const haystack = row.getAttribute('data-search') || '';
+                    row.classList.toggle('hidden', !!query && !haystack.includes(query));
                   });
                 });
-              }
-              capVisibleContentLists();
+              });
             }
 
             initContentPanel();
             if (!window.__contentPanelHooked) {
               window.__contentPanelHooked = true;
               document.addEventListener('astro:page-load', initContentPanel);
-              // The main portal script shows the saved tab and handles toggle
-              // clicks; cap whichever list just became visible afterwards
-              document.addEventListener('click', (event) => {
-                if (event.target instanceof Element && event.target.closest('.toggle-content-btn')) {
-                  setTimeout(capVisibleContentLists, 0);
-                }
-              });
             }
           })();
         </script>
