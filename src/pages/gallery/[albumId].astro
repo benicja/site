@@ -576,7 +576,7 @@ const existingShareToken =
     {isAdmin && (
       <div id="share-modal" class="hidden fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
         <div id="share-modal-backdrop" class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-200"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div id="share-modal-wrap" class="absolute inset-0 flex items-center justify-center p-4">
           <div id="share-modal-panel" class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 opacity-0 translate-y-2 transition-all duration-200">
             <button
               type="button"
@@ -714,6 +714,12 @@ const existingShareToken =
 
           closeBtn?.addEventListener('click', closeModal);
           backdrop?.addEventListener('click', closeModal);
+          // The centering wrapper covers the backdrop, so clicks on the faded
+          // area land on it rather than the backdrop itself
+          const wrap = document.getElementById('share-modal-wrap');
+          wrap?.addEventListener('click', (event) => {
+            if (event.target === wrap) closeModal();
+          });
           document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
           });
