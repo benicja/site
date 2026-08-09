@@ -83,27 +83,51 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
 <Layout title="Site Administration" description="Manage gallery and site configuration" user={user} isAdmin={isAdmin}>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 sm:pb-16">
     <div class="space-y-12">
-      <!-- Access Requests -->
+      <!-- People: Access Requests / Approved Users -->
       <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12">
-        <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A4 4 0 0110 16h4a4 4 0 014 4v1H6v-1a4 4 0 01-.879-2.196z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        <div class="flex items-center gap-4 mb-8">
+          <button
+            type="button"
+            id="toggle-requests-btn"
+            class="toggle-users-btn px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full transition-colors"
+            data-users-target="requests"
+          >
+            Access Requests ({pendingRequests.length})
+          </button>
+          <button
+            type="button"
+            id="toggle-approved-btn"
+            class="toggle-users-btn px-6 py-2 bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-300 transition-colors"
+            data-users-target="approved"
+          >
+            Approved Users ({activeUsers.length})
+          </button>
+        </div>
+
+        <div class="relative mb-6">
+          <input
+            type="text"
+            id="users-search"
+            placeholder="Search by email or name..."
+            class="w-full px-5 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-gray-600 font-normal text-black text-sm"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="absolute right-5 top-1/2 -translate-y-1/2 text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-          </div>
-          <div>
-            <h2 class="text-xl font-serif text-gray-900">Access Requests</h2>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pending Approval</p>
           </div>
         </div>
 
+        <div id="requests-users-section" class="users-section">
         {pendingRequests.length > 0 ? (
-          <div class="space-y-4" id="access-requests">
+          <div class="space-y-4 pr-1" id="access-requests" data-users-list>
             {pendingRequests.map((request) => (
               <div
                 class="request-row border border-gray-100 rounded-2xl p-6 flex flex-col gap-4"
                 data-request-id={request.id}
+                data-search={`${request.email} ${request.full_name || ''}`.toLowerCase()}
               >
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div>
@@ -148,30 +172,17 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
         ) : (
           <div class="text-sm text-gray-500">No pending requests.</div>
         )}
-      </section>
-
-      <!-- Approved Users -->
-      <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12">
-        <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a4 4 0 00-4-4h-1" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20H4v-2a4 4 0 014-4h1" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 12a4 4 0 100-8 4 4 0 000 8z" />
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-xl font-serif text-gray-900">Approved Users</h2>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Active Access</p>
-          </div>
+          <div class="users-no-match hidden text-sm text-gray-500 mt-2">No matches.</div>
         </div>
 
+        <div id="approved-users-section" class="users-section hidden">
         {activeUsers.length > 0 ? (
-          <div class="space-y-3">
+          <div class="space-y-3 pr-1" id="approved-users" data-users-list>
             {activeUsers.map((approved) => (
               <div
                 class="approved-row border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                 data-approved-id={approved.id}
+                data-search={approved.email.toLowerCase()}
               >
                 <div>
                   <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Email</p>
@@ -218,6 +229,81 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
         ) : (
           <div class="text-sm text-gray-500">No approved users yet.</div>
         )}
+          <div class="users-no-match hidden text-sm text-gray-500 mt-2">No matches.</div>
+        </div>
+
+        <script is:inline>
+          (function () {
+            function initUsersPanel() {
+              const buttons = document.querySelectorAll('.toggle-users-btn');
+              const search = document.getElementById('users-search');
+              if (!buttons.length || !search || search.dataset.bound === '1') return;
+              search.dataset.bound = '1';
+
+              // Cap each list at six items tall; anything beyond scrolls
+              const capList = (list) => {
+                if (!list || list.dataset.capped === '1') return;
+                const items = Array.from(list.children);
+                if (items.length > 6) {
+                  const height = items[6].offsetTop - items[0].offsetTop;
+                  if (height > 0) {
+                    list.style.maxHeight = height + 'px';
+                    list.style.overflowY = 'auto';
+                    list.dataset.capped = '1';
+                  }
+                }
+              };
+
+              const applySearch = () => {
+                const query = search.value.trim().toLowerCase();
+                document.querySelectorAll('[data-users-list]').forEach((list) => {
+                  let anyVisible = false;
+                  Array.from(list.children).forEach((row) => {
+                    const haystack = row.getAttribute('data-search') || '';
+                    const show = !query || haystack.includes(query);
+                    row.classList.toggle('hidden', !show);
+                    if (show) anyVisible = true;
+                  });
+                  const noMatch = list.parentElement?.querySelector('.users-no-match');
+                  noMatch?.classList.toggle('hidden', anyVisible || !query);
+                });
+              };
+
+              const switchUsers = (target) => {
+                document.querySelectorAll('.users-section').forEach((section) => {
+                  section.classList.add('hidden');
+                });
+                document.getElementById(`${target}-users-section`)?.classList.remove('hidden');
+
+                buttons.forEach((button) => {
+                  const active = button.dataset.usersTarget === target;
+                  button.classList.toggle('bg-gray-900', active);
+                  button.classList.toggle('text-white', active);
+                  button.classList.toggle('bg-gray-200', !active);
+                  button.classList.toggle('text-gray-600', !active);
+                  button.classList.toggle('hover:bg-gray-300', !active);
+                });
+
+                localStorage.setItem('adminUsersTab', target);
+                // Heights are only measurable once the section is visible
+                capList(document.querySelector(`#${target}-users-section [data-users-list]`));
+              };
+
+              buttons.forEach((button) => {
+                button.addEventListener('click', () => switchUsers(button.dataset.usersTarget));
+              });
+              search.addEventListener('input', applySearch);
+
+              switchUsers(localStorage.getItem('adminUsersTab') || 'requests');
+            }
+
+            initUsersPanel();
+            if (!window.__usersPanelPageLoadHooked) {
+              window.__usersPanelPageLoadHooked = true;
+              document.addEventListener('astro:page-load', initUsersPanel);
+            }
+          })();
+        </script>
       </section>
 
       <!-- Sync Column -->
