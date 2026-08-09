@@ -590,16 +590,16 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
         document.querySelectorAll('#recipes-grid img[loading="lazy"]')
       ) as HTMLImageElement[];
       let index = 0;
-      const next = () => {
+      const next = async () => {
         if (index >= images.length) return;
         const img = images[index++];
-        if (img.complete && img.naturalWidth > 0) {
-          next();
-          return;
-        }
-        const preload = new Image();
-        preload.onload = preload.onerror = () => setTimeout(next, 50);
-        preload.src = img.currentSrc || img.src;
+        // Force the fetch and the decode, so revealing the card later costs
+        // nothing at all
+        img.loading = 'eager';
+        try {
+          await img.decode();
+        } catch {}
+        setTimeout(next, 50);
       };
       next();
     }
