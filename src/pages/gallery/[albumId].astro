@@ -500,11 +500,11 @@ const existingShareToken =
       <h1 class="mt-4 text-3xl md:text-4xl font-serif font-medium text-gray-900">
         You don't have access to this album
       </h1>
-      <p class="mt-4 text-gray-500 font-light">
-        {shareParam
-          ? 'This share link is no longer valid. Ask the person who sent it for a fresh one, or request full gallery access.'
-          : 'Your account isn’t approved for the gallery yet. You can request access below.'}
-      </p>
+      {shareParam && (
+        <p class="mt-4 text-gray-500 font-light">
+          This share link is no longer valid. Ask the person who sent it for a fresh one, or request full gallery access.
+        </p>
+      )}
       <div class="mt-10 flex items-center justify-center gap-4">
         <a
           href="/gallery/request-access"
