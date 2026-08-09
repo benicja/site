@@ -565,8 +565,8 @@ const existingShareToken =
           id="share-album-btn"
           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-700 hover:border-gray-900 transition-colors"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684zm0-9.316a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" />
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M13.1202 17.0228L8.92129 14.7324C8.19135 15.5125 7.15261 16 6 16C3.79086 16 2 14.2091 2 12C2 9.79086 3.79086 8 6 8C7.15255 8 8.19125 8.48746 8.92118 9.26746L13.1202 6.97713C13.0417 6.66441 13 6.33707 13 6C13 3.79086 14.7909 2 17 2C19.2091 2 21 3.79086 21 6C21 8.20914 19.2091 10 17 10C15.8474 10 14.8087 9.51251 14.0787 8.73246L9.87977 11.0228C9.9583 11.3355 10 11.6629 10 12C10 12.3371 9.95831 12.6644 9.87981 12.9771L14.0788 15.2675C14.8087 14.4875 15.8474 14 17 14C19.2091 14 21 15.7909 21 18C21 20.2091 19.2091 22 17 22C14.7909 22 13 20.2091 13 18C13 17.6629 13.0417 17.3355 13.1202 17.0228ZM6 14C7.10457 14 8 13.1046 8 12C8 10.8954 7.10457 10 6 10C4.89543 10 4 10.8954 4 12C4 13.1046 4.89543 14 6 14ZM17 8C18.1046 8 19 7.10457 19 6C19 4.89543 18.1046 4 17 4C15.8954 4 15 4.89543 15 6C15 7.10457 15.8954 8 17 8ZM17 20C18.1046 20 19 19.1046 19 18C19 16.8954 18.1046 16 17 16C15.8954 16 15 16.8954 15 18C15 19.1046 15.8954 20 17 20Z" />
           </svg>
           Share album
         </button>
@@ -574,12 +574,67 @@ const existingShareToken =
     </div>
 
     {isAdmin && (
+      <div id="share-modal" class="hidden fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+        <div id="share-modal-backdrop" class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-200"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+          <div id="share-modal-panel" class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 opacity-0 translate-y-2 transition-all duration-200">
+            <button
+              type="button"
+              id="share-modal-close"
+              class="absolute top-4 right-4 inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+              aria-label="Close"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 id="share-modal-title" class="font-serif text-xl text-gray-900 mb-1">Share album</h2>
+            <p class="text-sm text-gray-500 mb-5">
+              Anyone with this link can view the album after signing in:
+            </p>
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                id="share-modal-link"
+                readonly
+                class="flex-1 min-w-0 px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-mono"
+              />
+              <button
+                type="button"
+                id="share-modal-copy"
+                class="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                aria-label="Copy link to clipboard"
+              >
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" data-copy-icon>
+                  <path d="M6.9998 6V3C6.9998 2.44772 7.44752 2 7.9998 2H19.9998C20.5521 2 20.9998 2.44772 20.9998 3V17C20.9998 17.5523 20.5521 18 19.9998 18H16.9998V20.9991C16.9998 21.5519 16.5499 22 15.993 22H4.00666C3.45059 22 3 21.5554 3 20.9991L3.0026 7.00087C3.0027 6.44811 3.45264 6 4.00942 6H6.9998ZM5.00242 8L5.00019 20H14.9998V8H5.00242ZM8.9998 6H16.9998V16H18.9998V4H8.9998V6Z" />
+                </svg>
+                <svg class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" data-copied-icon>
+                  <path d="M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414L10 15.172z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {isAdmin && (
       <script is:inline define:vars={{ albumId, existingShareToken }}>
         (function () {
           const btn = document.getElementById('share-album-btn');
-          if (!btn) return;
+          const modal = document.getElementById('share-modal');
+          const backdrop = document.getElementById('share-modal-backdrop');
+          const panel = document.getElementById('share-modal-panel');
+          const closeBtn = document.getElementById('share-modal-close');
+          const linkInput = document.getElementById('share-modal-link');
+          const copyBtn = document.getElementById('share-modal-copy');
+          if (!btn || !modal || !panel || !linkInput || !copyBtn) return;
 
           let token = existingShareToken;
+          let copiedTimer;
+
+          const linkFor = (t) =>
+            `${window.location.origin}/gallery/${encodeURIComponent(albumId)}?share=${t}`;
 
           const snackbar = (message) => {
             const el = document.createElement('div');
@@ -587,7 +642,7 @@ const existingShareToken =
             el.style.cssText =
               'position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(8px);' +
               'background:#111827;color:#fff;padding:10px 20px;border-radius:999px;' +
-              'font-size:12px;font-weight:600;letter-spacing:0.05em;z-index:200;' +
+              'font-size:12px;font-weight:600;letter-spacing:0.05em;z-index:300;' +
               'opacity:0;transition:opacity 250ms ease, transform 250ms cubic-bezier(0.16,1,0.3,1);' +
               'box-shadow:0 10px 25px rgba(0,0,0,0.15);pointer-events:none;max-width:90vw;text-align:center';
             document.body.appendChild(el);
@@ -599,19 +654,23 @@ const existingShareToken =
               el.style.opacity = '0';
               el.style.transform = 'translateX(-50%) translateY(8px)';
               setTimeout(() => el.remove(), 300);
-            }, 2500);
+            }, 2000);
           };
 
-          const linkFor = (t) =>
-            `${window.location.origin}/gallery/${encodeURIComponent(albumId)}?share=${t}`;
+          const openModal = () => {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+              backdrop.classList.remove('opacity-0');
+              panel.classList.remove('opacity-0', 'translate-y-2');
+            });
+          };
 
-          const copy = async (text) => {
-            try {
-              await navigator.clipboard.writeText(text);
-              return true;
-            } catch {
-              return false;
-            }
+          const closeModal = () => {
+            backdrop.classList.add('opacity-0');
+            panel.classList.add('opacity-0', 'translate-y-2');
+            document.body.style.overflow = '';
+            setTimeout(() => modal.classList.add('hidden'), 200);
           };
 
           btn.addEventListener('click', async () => {
@@ -626,11 +685,37 @@ const existingShareToken =
                 if (!res.ok) throw new Error(data.error || 'Could not create share link');
                 token = data.token;
               }
-              const ok = await copy(linkFor(token));
-              snackbar(ok ? 'Copied album share link to clipboard' : linkFor(token));
+              linkInput.value = linkFor(token);
+              openModal();
             } catch (err) {
-              snackbar(err.message || 'Could not create share link');
+              linkInput.value = err.message || 'Could not create share link';
+              openModal();
             }
+          });
+
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(linkInput.value);
+            } catch {
+              linkInput.select();
+              document.execCommand('copy');
+            }
+            const copyIcon = copyBtn.querySelector('[data-copy-icon]');
+            const copiedIcon = copyBtn.querySelector('[data-copied-icon]');
+            copyIcon?.classList.add('hidden');
+            copiedIcon?.classList.remove('hidden');
+            snackbar('Copied to clipboard!');
+            clearTimeout(copiedTimer);
+            copiedTimer = setTimeout(() => {
+              copyIcon?.classList.remove('hidden');
+              copiedIcon?.classList.add('hidden');
+            }, 1500);
+          });
+
+          closeBtn?.addEventListener('click', closeModal);
+          backdrop?.addEventListener('click', closeModal);
+          document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
           });
         })();
       </script>
