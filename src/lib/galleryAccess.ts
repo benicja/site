@@ -83,6 +83,18 @@ export async function isMediaUrlInAlbum(albumId: string, url: string): Promise<b
   return !!album;
 }
 
+// Album covers are the one publicly viewable image class: the album list
+// shows them to signed-out visitors. Only exact cover URLs qualify
+export async function isAlbumCoverUrl(url: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from('gallery_albums')
+    .select('google_album_id')
+    .eq('cover_image_url', url)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function isKnownMediaUrl(url: string): Promise<boolean> {
   const { data: photo } = await supabaseAdmin
     .from('gallery_photos')

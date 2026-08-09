@@ -4,7 +4,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { getAlbumById, getPhotosByAlbumId, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
-import { getAlbumIdForToken } from '../../lib/galleryAccess';
+import { getAlbumIdForToken, getShareTokenForAlbum } from '../../lib/galleryAccess';
 import AlbumCommentSection from '../../components/AlbumCommentSection';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
@@ -54,6 +54,11 @@ const shareSuffix =
   viewState === 'view' && !isApproved && shareParam
     ? `&share=${encodeURIComponent(shareParam)}`
     : '';
+
+// Known ahead of time so the admin's copy-link click is synchronous when a
+// token already exists (Safari only allows clipboard writes in the gesture)
+const existingShareToken =
+  viewState === 'view' && isAdmin ? await getShareTokenForAlbum(albumId) : null;
 ---
 
 <style is:global>
@@ -535,129 +540,76 @@ const shareSuffix =
         </p>
       </div>
       {isAdmin && (
-        <div class="w-full sm:w-auto">
-          <button
-            type="button"
-            id="share-album-btn"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-700 hover:border-gray-900 transition-colors"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684zm0-9.316a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" />
-            </svg>
-            Share album
-          </button>
-          <div id="share-album-panel" class="hidden mt-3 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm w-full sm:w-[420px]">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Share link</p>
-            <p class="text-xs text-gray-500 mb-3">
-              Anyone with this link can view this album after signing in with Google,
-              even without full gallery access. Rotating invalidates old links.
-            </p>
-            <div class="flex items-center gap-2">
-              <input
-                type="text"
-                id="share-album-link"
-                readonly
-                class="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-mono"
-              />
-              <button type="button" id="share-album-copy" class="px-4 py-2 rounded-lg bg-gray-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-gray-700 transition-colors">
-                Copy
-              </button>
-            </div>
-            <div class="flex items-center gap-4 mt-3">
-              <button type="button" id="share-album-rotate" class="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-900 transition-colors">
-                Rotate link
-              </button>
-              <button type="button" id="share-album-disable" class="text-[10px] font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors">
-                Disable sharing
-              </button>
-            </div>
-            <p id="share-album-status" class="hidden mt-2 text-xs text-gray-500"></p>
-          </div>
-        </div>
+        <button
+          type="button"
+          id="share-album-btn"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-gray-200 bg-white text-[10px] font-bold uppercase tracking-widest text-gray-700 hover:border-gray-900 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684zm0-9.316a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" />
+          </svg>
+          Share album
+        </button>
       )}
     </div>
 
     {isAdmin && (
-      <script is:inline define:vars={{ albumId }}>
+      <script is:inline define:vars={{ albumId, existingShareToken }}>
         (function () {
           const btn = document.getElementById('share-album-btn');
-          const panel = document.getElementById('share-album-panel');
-          const linkInput = document.getElementById('share-album-link');
-          const copyBtn = document.getElementById('share-album-copy');
-          const rotateBtn = document.getElementById('share-album-rotate');
-          const disableBtn = document.getElementById('share-album-disable');
-          const status = document.getElementById('share-album-status');
-          if (!btn || !panel || !linkInput) return;
+          if (!btn) return;
 
-          const setStatus = (msg) => {
-            if (!status) return;
-            status.textContent = msg;
-            status.classList.toggle('hidden', !msg);
-          };
+          let token = existingShareToken;
 
-          const call = async (action) => {
-            const res = await fetch('/api/gallery/share-token', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ album_id: albumId, action })
+          const snackbar = (message) => {
+            const el = document.createElement('div');
+            el.textContent = message;
+            el.style.cssText =
+              'position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(8px);' +
+              'background:#111827;color:#fff;padding:10px 20px;border-radius:999px;' +
+              'font-size:12px;font-weight:600;letter-spacing:0.05em;z-index:200;' +
+              'opacity:0;transition:opacity 250ms ease, transform 250ms cubic-bezier(0.16,1,0.3,1);' +
+              'box-shadow:0 10px 25px rgba(0,0,0,0.15);pointer-events:none;max-width:90vw;text-align:center';
+            document.body.appendChild(el);
+            requestAnimationFrame(() => {
+              el.style.opacity = '1';
+              el.style.transform = 'translateX(-50%) translateY(0)';
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Request failed');
-            return data;
+            setTimeout(() => {
+              el.style.opacity = '0';
+              el.style.transform = 'translateX(-50%) translateY(8px)';
+              setTimeout(() => el.remove(), 300);
+            }, 2500);
           };
 
-          const showLink = (token) => {
-            linkInput.value = `${window.location.origin}/gallery/${encodeURIComponent(albumId)}?share=${token}`;
+          const linkFor = (t) =>
+            `${window.location.origin}/gallery/${encodeURIComponent(albumId)}?share=${t}`;
+
+          const copy = async (text) => {
+            try {
+              await navigator.clipboard.writeText(text);
+              return true;
+            } catch {
+              return false;
+            }
           };
 
           btn.addEventListener('click', async () => {
-            if (!panel.classList.contains('hidden')) {
-              panel.classList.add('hidden');
-              return;
-            }
             try {
-              setStatus('');
-              const data = await call('enable');
-              showLink(data.token);
-              panel.classList.remove('hidden');
+              if (!token) {
+                const res = await fetch('/api/gallery/share-token', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ album_id: albumId, action: 'enable' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Could not create share link');
+                token = data.token;
+              }
+              const ok = await copy(linkFor(token));
+              snackbar(ok ? 'Copied album share link to clipboard' : linkFor(token));
             } catch (err) {
-              panel.classList.remove('hidden');
-              linkInput.value = '';
-              setStatus(err.message);
-            }
-          });
-
-          copyBtn?.addEventListener('click', async () => {
-            try {
-              await navigator.clipboard.writeText(linkInput.value);
-              setStatus('Copied to clipboard');
-            } catch {
-              linkInput.select();
-              document.execCommand('copy');
-              setStatus('Copied');
-            }
-          });
-
-          rotateBtn?.addEventListener('click', async () => {
-            if (!confirm('Rotate the share link? Everyone using the old link loses access.')) return;
-            try {
-              const data = await call('rotate');
-              showLink(data.token);
-              setStatus('New link created. Old links no longer work');
-            } catch (err) {
-              setStatus(err.message);
-            }
-          });
-
-          disableBtn?.addEventListener('click', async () => {
-            if (!confirm('Disable sharing for this album? The link stops working immediately.')) return;
-            try {
-              await call('disable');
-              linkInput.value = '';
-              panel.classList.add('hidden');
-              setStatus('');
-            } catch (err) {
-              setStatus(err.message);
+              snackbar(err.message || 'Could not create share link');
             }
           });
         })();
