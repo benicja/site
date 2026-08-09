@@ -214,26 +214,6 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
     warmRecipesList();
     document.addEventListener('astro:page-load', warmRecipesList);
 
-    // Ease the hero heart count up from 0 once the live count arrives,
-    // matching the count-up feel of the HD Admin dashboard
-    function easeOutQuart(t: number): number {
-      return 1 - (1 - t) ** 4;
-    }
-
-    function countUp(el: Element, target: number, durationMs = 900) {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || target === 0) {
-        el.textContent = String(target);
-        return;
-      }
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min((now - start) / durationMs, 1);
-        el.textContent = String(Math.round(target * easeOutQuart(t)));
-        if (t < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-
     async function hydrateHearts() {
       const countEl = document.querySelector('.hero-rating-count');
       const page = document.querySelector('.recipe-page');
@@ -244,7 +224,7 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
 
       const data = await getPageData();
       if (!data) return;
-      countUp(countEl, data.hearts[slug] || 0);
+      countEl.textContent = String(data.hearts[slug] || 0);
     }
 
     hydrateHearts();
