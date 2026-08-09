@@ -15,16 +15,9 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
     
-    // 3. Store in cookies - mark as a "link_photos" attempt
-    cookies.set('oauth_state', state, {
-      httpOnly: true,
-      secure: import.meta.env.PROD,
-      sameSite: 'lax',
-      maxAge: 60 * 10,
-      path: '/'
-    });
-
-    cookies.set('oauth_code_verifier', codeVerifier, {
+    // 3. Store the verifier keyed by state (same scheme as login.ts, so
+    //    concurrent attempts can't clobber each other) - mark as "link_photos"
+    cookies.set(`oauth_v_${state}`, codeVerifier, {
       httpOnly: true,
       secure: import.meta.env.PROD,
       sameSite: 'lax',

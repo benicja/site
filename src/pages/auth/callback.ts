@@ -7,8 +7,9 @@ export const prerender = false;
 export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
-  const storedState = cookies.get('oauth_state')?.value;
-  const storedVerifier = cookies.get('oauth_code_verifier')?.value;
+  // The verifier lives in a cookie keyed by the state value (see login.ts),
+  // so a concurrent login initiation can't clobber this attempt's verifier
+  const storedVerifier = state ? cookies.get(`oauth_v_${state}`)?.value : undefined;
   const isLinkingPhotos = cookies.get('link_photos_mode')?.value === 'true';
 
   // PRAGMATIC CHECK: If we already have a session, maybe this is a double-tap/refresh
@@ -20,39 +21,43 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     if (user) {
       console.log('Session already exists, skipping OAuth exchange and redirecting');
       const targetRedirect = cookies.get('auth_redirect')?.value || '/gallery';
-      cookies.delete('oauth_state', { path: '/' });
-      cookies.delete('oauth_code_verifier', { path: '/' });
+      if (state) cookies.delete(`oauth_v_${state}`, { path: '/' });
       cookies.delete('auth_redirect', { path: '/' });
+      cookies.delete('oauth_retry', { path: '/' });
       return redirect(targetRedirect);
     }
   }
 
-  // Validate request integrity
-  // Check for missing OAuth parameters - if linking photos mode, we require all params
-  // If NOT linking photos, missing params on an accidental callback is OK since we checked session above
-  if (!code || !state || !storedState || !storedVerifier) {
-    console.error('Auth Validation Failed: Missing OAuth parameters', { 
-      hasCode: !!code, 
-      hasState: !!state, 
-      hasStoredState: !!storedState, 
+  // Validate request integrity. A missing verifier cookie means this attempt's
+  // cookie expired or was never set (third-party cookie blocking, a stale
+  // callback URL). Retry the whole login once automatically; if that also
+  // fails, show a real error page instead of dying on a black screen
+  if (!code || !state || !storedVerifier) {
+    console.error('Auth Validation Failed: Missing OAuth parameters', {
+      hasCode: !!code,
+      hasState: !!state,
       hasStoredVerifier: !!storedVerifier
     });
-    // If linking photos, this is a required flow failure
     if (isLinkingPhotos) {
       return new Response('Invalid request parameters', { status: 400 });
     }
-    // For normal auth, this might be an accidental request - redirect to gallery
-    return redirect('/gallery');
+
+    const alreadyRetried = cookies.get('oauth_retry')?.value === '1';
+    if (alreadyRetried) {
+      cookies.delete('oauth_retry', { path: '/' });
+      return redirect('/auth/error');
+    }
+    cookies.set('oauth_retry', '1', {
+      httpOnly: true,
+      secure: import.meta.env.PROD,
+      sameSite: 'lax',
+      maxAge: 60 * 2,
+      path: '/'
+    });
+    const next = cookies.get('auth_redirect')?.value;
+    return redirect(`/auth/login${next ? `?next=${encodeURIComponent(next)}` : ''}`);
   }
 
-  if (state !== storedState) {
-    console.error('Auth Validation Failed: State mismatch', { 
-      state,
-      storedState
-    });
-    return new Response('Invalid request parameters', { status: 400 });
-  }
-  
   try {
     // Exchange code for tokens using the stored verifier
     const google = getGoogleClient(url.origin);
@@ -116,28 +121,33 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       if (configError) throw configError;
 
       // Clean up and redirect back to gallery
-      cookies.delete('oauth_state', { path: '/' });
-      cookies.delete('oauth_code_verifier', { path: '/' });
+      cookies.delete(`oauth_v_${state}`, { path: '/' });
       cookies.delete('link_photos_mode', { path: '/' });
+      cookies.delete('oauth_retry', { path: '/' });
       return redirect('/gallery?linked=success');
     }
 
     // Check if email is approved
     const approved = await isEmailApproved(userInfo.email);
-    
+
     // Get target redirect
     const targetRedirect = cookies.get('auth_redirect')?.value || '/gallery';
 
     // Clean up OAuth cookies
-    cookies.delete('oauth_state', { path: '/' });
-    cookies.delete('oauth_code_verifier', { path: '/' });
+    cookies.delete(`oauth_v_${state}`, { path: '/' });
     cookies.delete('auth_redirect', { path: '/' });
+    cookies.delete('oauth_retry', { path: '/' });
 
     if (!approved) {
-      // Redirect to access request page (user now has a session so they can view it)
-      return redirect('/gallery/request-access');
+      // A share link works for signed-in users without overall approval, so
+      // let those through to the album page (which validates the token).
+      // Everyone else lands on the access request page
+      const isShareLink = targetRedirect.startsWith('/gallery/') && targetRedirect.includes('share=');
+      if (!isShareLink) {
+        return redirect('/gallery/request-access');
+      }
     }
-    
+
     // Redirect to target or gallery
     return redirect(targetRedirect);
     

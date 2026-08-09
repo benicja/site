@@ -53,6 +53,7 @@ if (resolveAuth) {
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="referrer" content="same-origin" />
     <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/png" sizes="16x16" href="/images/app_logo.png" />
@@ -347,7 +348,8 @@ if (resolveAuth) {
                           <p class="text-xs font-medium text-gray-900 truncate">{user.user_name || user.user_email}</p>
                         </div>
                         <a 
-                          href="/auth/logout" 
+                          href="/auth/logout"
+                          data-astro-prefetch="false" 
                           class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
                         >
                           Logout
@@ -357,6 +359,7 @@ if (resolveAuth) {
                   ) : (
                     <a
                       href={`/auth/login?next=${currentPath}`}
+                      data-astro-prefetch="false"
                       class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 ring-1 ring-gray-200 transition-colors flex items-center justify-center -mt-1.5"
                       title="Login with Google"
                     >
@@ -371,6 +374,7 @@ if (resolveAuth) {
                   <div class="relative" data-auth-shell>
                     <a
                       href={`/auth/login?next=${currentPath}`}
+                      data-astro-prefetch="false"
                       class="relative w-8 h-8 rounded-full overflow-hidden border border-gray-100 ring-1 ring-gray-200 transition-colors flex items-center justify-center -mt-1.5"
                       title="Login with Google"
                       data-auth-out
@@ -401,6 +405,7 @@ if (resolveAuth) {
                           </div>
                           <a
                             href="/auth/logout"
+                          data-astro-prefetch="false"
                             class="block w-full text-left px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500 hover:bg-red-50 transition-colors"
                           >
                             Logout
@@ -484,13 +489,15 @@ if (resolveAuth) {
                       <p class="text-sm font-medium text-gray-900 truncate max-w-[170px]">{user.user_name || user.user_email}</p>
                     </div>
                   </div>
-                  <a href="/auth/logout" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
+                  <a href="/auth/logout"
+                          data-astro-prefetch="false" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
                     Logout
                   </a>
                 </div>
               ) : (
                 <a
                   href={`/auth/login?next=${currentPath}`}
+                      data-astro-prefetch="false"
                   class="inline-flex items-center justify-center w-full py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em]"
                 >
                   Sign in
@@ -500,6 +507,7 @@ if (resolveAuth) {
               <div class="relative" data-auth-shell>
                 <a
                   href={`/auth/login?next=${currentPath}`}
+                      data-astro-prefetch="false"
                   class="inline-flex items-center justify-center w-full py-3 rounded-full bg-gray-900 text-white text-xs font-bold uppercase tracking-[0.2em]"
                   data-auth-out
                 >
@@ -521,7 +529,8 @@ if (resolveAuth) {
                         <p data-auth-name class="text-sm font-medium text-gray-900 truncate max-w-[170px]"></p>
                       </div>
                     </div>
-                    <a href="/auth/logout" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
+                    <a href="/auth/logout"
+                          data-astro-prefetch="false" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
                       Logout
                     </a>
                   </div>
