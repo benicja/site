@@ -581,43 +581,10 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
       } catch {}
     });
 
-    // Card images load lazily for a fast first paint, which used to mean a
-    // filter could surface a card whose image had never been fetched, so it
-    // popped in seconds after its neighbours. Warm the remaining images one
-    // at a time during idle so filtering always reveals cached images
-    function warmCardImages() {
-      const images = Array.from(
-        document.querySelectorAll('#recipes-grid img[loading="lazy"]')
-      ) as HTMLImageElement[];
-      let index = 0;
-      const next = async () => {
-        if (index >= images.length) return;
-        const img = images[index++];
-        // Force the fetch and the decode, so revealing the card later costs
-        // nothing at all
-        img.loading = 'eager';
-        try {
-          await img.decode();
-        } catch {}
-        setTimeout(next, 50);
-      };
-      next();
-    }
-
-    function scheduleImageWarm() {
-      if (!document.getElementById('recipes-grid')) return;
-      if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(warmCardImages, { timeout: 3000 });
-      } else {
-        setTimeout(warmCardImages, 1500);
-      }
-    }
-
     // Re-initialize after view transitions
     document.addEventListener('astro:page-load', () => {
       initSearch();
       applyPageData();
-      scheduleImageWarm();
     });
   </script>
 </Layout>
