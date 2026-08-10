@@ -1,14 +1,16 @@
 ---
-title: Cheesecake San Sebastián
-description: "Coming soon"
+title: San Sebastián Cheesecake
+description: Coming soon
 featured_image: /images/recipes/cheesecake.jpg
 prep_time: 20
 cook_time: 40
 servings: 10
 category: Dessert
 authors:
-  - name: "Alicja N"
-    image: "https://lh3.googleusercontent.com/a-/ALV-UjXh67hsAAqAPrFCwJVZWCKK90svXyEzVuUlDoW9ZvssUsySfToTwQ=s289-p-k-rw-no"
+  - name: Alicja N
+    image: https://lh3.googleusercontent.com/a-/ALV-UjXh67hsAAqAPrFCwJVZWCKK90svXyEzVuUlDoW9ZvssUsySfToTwQ=s289-p-k-rw-no
+  - name: Ben H
+    image: https://lh3.googleusercontent.com/a/ACg8ocK8hIEg4KAKIVrtuo8lR1lXQKPE8fUTCgHyppX8VJBom07zIuI=s96-c
 ingredients:
   - item: Digestive biscuits (or your favorite cookies)
     amount: 180g
