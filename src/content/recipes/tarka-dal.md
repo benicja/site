@@ -1,55 +1,56 @@
 ---
-title: "Tarka Dal"
-description: "Coming soon"
-featured_image: "/images/recipes/tarka.jpg"
+title: Chicken & Chickpea Dal
+description: Coming soon
+featured_image: /images/recipes/tarka.jpg
 prep_time: 10
 cook_time: 35
 servings: 4
-category: "Dinner"
-publishDate: 2026-02-13
+category: Dinner
 authors:
-  - name: "Ben H"
-    image: "https://lh3.googleusercontent.com/a/ACg8ocK8hIEg4KAKIVrtuo8lR1lXQKPE8fUTCgHyppX8VJBom07zIuI=s96-c"
+  - name: Ben H
+    image: https://lh3.googleusercontent.com/a/ACg8ocK8hIEg4KAKIVrtuo8lR1lXQKPE8fUTCgHyppX8VJBom07zIuI=s96-c
 ingredients:
-  - item: "Large Onion"
+  - item: Large Onion
     amount: "0.5"
-  - item: "Garlic Cloves"
+  - item: Garlic Cloves
     amount: "4"
-  - item: "Head Broccoli"
+  - item: Head Broccoli
     amount: "1"
-  - item: "Chicken Breasts"
-    amount: "1kg"
-  - item: "Red Split Lentils"
-    amount: "200g"
-  - item: "Tin Chickpeas (sub for Chicken)"
-    amount: "1 tin"
-  - item: "Basmati Rice"
-    amount: "200g"
-  - item: "Olive Oil"
-    amount: "as needed"
-  - item: "Cumin"
-    amount: "1 tbsp"
-  - item: "Turmeric"
-    amount: "1 tsp"
-  - item: "Chili Powder"
-    amount: "1 tsp"
-  - item: "Smoked Paprika"
-    amount: "3 tsp"
-  - item: "Salt"
-    amount: "to taste"
-  - item: "Pepper"
-    amount: "to taste"
+  - item: Chicken Breasts
+    amount: 1kg
+  - item: Red Split Lentils
+    amount: 200g
+  - item: Tin Chickpeas (sub for Chicken)
+    amount: 1 tin
+  - item: Basmati Rice
+    amount: 200g
+  - item: Olive Oil
+    amount: as needed
+  - item: Cumin
+    amount: 1 tbsp
+  - item: Turmeric
+    amount: 1 tsp
+  - item: Chili Powder
+    amount: 1 tsp
+  - item: Smoked Paprika
+    amount: 3 tsp
+  - item: Salt
+    amount: to taste
+  - item: Pepper
+    amount: to taste
 instructions:
-  - step: "Prepare a wok and saucepan."
-  - step: "Put Basmati Rice into frying pan and cover with cold water. Leave to soak."
-  - step: "Steam cook Broccoli in saucepan."
-  - step: "Dice Onion, Garlic and Chicken."
-  - step: "After 8 minutes, drain Broccoli, then transfer soaked Rice into saucepan and boil. Top up with more hot water until Rice is fluffy."
-  - step: "Add chopped Onion to frying pan and fry in Olive Oil for 5 minutes until golden, then add Garlic, Cumin, and Chili Powder. Fry everything together for 5 more minutes."
-  - step: "Remove Onion-Garlic-Spice mixture ('tarka'). Set aside. Add diced Chicken to frying pan with more Olive Oil. Fry 5 minutes until browned, then add Smoked Paprika, Salt, Pepper, and fry 5 more minutes."
-  - step: "When Rice is fluffy and water fully absorbed, set aside."
-  - step: "Rinse Lentils and add to saucepan. Cover with water and bring to a boil."
-  - step: "Add Turmeric to Lentils, then add cooked Chicken or drained Chickpeas. Simmer for about 10 minutes."
-  - step: "When Lentils soften, mix in tarka."
-  - step: "Serve with Rice and steamed Broccoli."
+  - step: Prepare a wok and saucepan.
+  - step: Put Basmati Rice into frying pan and cover with cold water. Leave to soak.
+  - step: Steam cook Broccoli in saucepan.
+  - step: Dice Onion, Garlic and Chicken.
+  - step: After 8 minutes, drain Broccoli, then transfer soaked Rice into saucepan and boil. Top up with more hot water until Rice is fluffy.
+  - step: Add chopped Onion to frying pan and fry in Olive Oil for 5 minutes until golden, then add Garlic, Cumin, and Chili Powder. Fry everything together for 5 more minutes.
+  - step: Remove Onion-Garlic-Spice mixture ('tarka'). Set aside. Add diced Chicken to frying pan with more Olive Oil. Fry 5 minutes until browned, then add Smoked Paprika, Salt, Pepper, and fry 5 more minutes.
+  - step: When Rice is fluffy and water fully absorbed, set aside.
+  - step: Rinse Lentils and add to saucepan. Cover with water and bring to a boil.
+  - step: Add Turmeric to Lentils, then add cooked Chicken or drained Chickpeas. Simmer for about 10 minutes.
+  - step: When Lentils soften, mix in tarka.
+  - step: Serve with Rice and steamed Broccoli.
+publishDate: 2026-02-13
 ---
+
