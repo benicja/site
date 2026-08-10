@@ -166,8 +166,10 @@ if (resolveAuth) {
         display: revert;
       }
 
+      /* block, not revert: reverting an <a> makes it inline, which ignores
+         the mobile menu's space-y margins and squashes the links together */
       html.is-admin [data-auth-admin] {
-        display: revert;
+        display: block;
       }
 
       html {
