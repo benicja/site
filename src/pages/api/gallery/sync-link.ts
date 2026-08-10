@@ -11,29 +11,90 @@ const GOOGLE_HEADERS = {
   'Referer': 'https://photos.google.com/'
 };
 
+// Google marks videos in the share page's embedded data: each media item's
+// trailing metadata object carries this protobuf field (duration, dimensions,
+// download URL) for videos only. Photos carry other keys but never this one.
+const VIDEO_INFO_KEY = '76647426';
+
+// Find the index just past the ']' that closes the '[' at `start`,
+// skipping over string literals. Returns -1 if unbalanced.
+function findBalancedEnd(html: string, start: number): number {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < html.length; i++) {
+    const c = html[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === '"') inString = true;
+    else if (c === '[') depth++;
+    else if (c === ']') {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return -1;
+}
+
+// Parse the media item arrays embedded in the album page and map each item's
+// base image URL to its media type. Videos are identified by VIDEO_INFO_KEY —
+// deterministic, unlike probing Google with a HEAD request, which takes 2-4s
+// per video and used to time out on longer ones (misclassifying them as
+// photos).
+function extractMediaTypesFromHtml(html: string): Map<string, MediaType> {
+  const map = new Map<string, MediaType>();
+  const itemStart = /\["AF1Qip[a-zA-Z0-9\-_]*",\["https:\/\/lh/g;
+  let match: RegExpExecArray | null;
+  while ((match = itemStart.exec(html)) !== null) {
+    const end = findBalancedEnd(html, match.index);
+    if (end === -1) continue;
+    try {
+      const item = JSON.parse(html.slice(match.index, end));
+      const url = item?.[1]?.[0];
+      if (typeof url !== 'string') continue;
+      const baseUrl = url.split('=')[0];
+      const meta = item[item.length - 1];
+      const isVideo =
+        !!meta && typeof meta === 'object' && !Array.isArray(meta) && VIDEO_INFO_KEY in meta;
+      // The same URL can appear in more than one data block; video wins
+      if (isVideo || !map.has(baseUrl)) map.set(baseUrl, isVideo ? 'video' : 'image');
+    } catch {
+      // Unparseable item — the probe fallback will cover its URL
+    }
+  }
+  return map;
+}
+
+// Fallback for URLs missing from the parsed page data. Videos take Google
+// 2-4s to answer for, so the timeout must be generous and a definitive
+// image answer (photos 404 in ~300ms) is trusted immediately.
 async function probeMediaType(baseUrl: string): Promise<MediaType> {
   const videoProbeUrl = `${baseUrl}=dv`;
 
-  try {
-    // Only use HEAD request for speed - usually enough to distinguish via Content-Type
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout for each probe
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const headResponse = await fetch(videoProbeUrl, {
-      method: 'HEAD',
-      headers: GOOGLE_HEADERS,
-      redirect: 'follow',
-      signal: controller.signal
-    });
+      const headResponse = await fetch(videoProbeUrl, {
+        method: 'HEAD',
+        headers: GOOGLE_HEADERS,
+        redirect: 'follow',
+        signal: controller.signal
+      });
 
-    clearTimeout(timeout);
+      clearTimeout(timeout);
 
-    if (headResponse.ok) {
       const contentType = headResponse.headers.get('content-type') || '';
-      if (contentType.startsWith('video/')) return 'video';
+      if (headResponse.ok && contentType.startsWith('video/')) return 'video';
+      if (contentType.startsWith('image/')) return 'image';
+    } catch (error) {
+      // Timed out or network error — retry once before giving up
     }
-  } catch (error) {
-    // If probe fails or times out, default to image
   }
 
   return 'image';
@@ -190,13 +251,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (albumError) throw albumError;
 
-    // Use higher concurrency for much faster syncing (50 items at once)
-    const mediaTypes = await mapWithConcurrency(uniqueBaseUrls, 50, async (photoUrl) => {
-      return await probeMediaType(photoUrl);
+    // Media types come from the page data itself; the network probe only
+    // runs for URLs the parser missed, so keep its concurrency modest
+    const htmlMediaTypes = extractMediaTypesFromHtml(html);
+    const mediaTypes = await mapWithConcurrency(uniqueBaseUrls, 8, async (photoUrl) => {
+      return htmlMediaTypes.get(photoUrl) ?? await probeMediaType(photoUrl);
     });
 
     const videoCount = mediaTypes.filter((type) => type === 'video').length;
-    console.log(`Detected ${videoCount} videos out of ${uniqueBaseUrls.length} items.`);
+    const probedCount = uniqueBaseUrls.filter((u) => !htmlMediaTypes.has(u)).length;
+    console.log(`Detected ${videoCount} videos out of ${uniqueBaseUrls.length} items (${probedCount} needed probing).`);
 
     const photoRows = uniqueBaseUrls.map((photoUrl, index) => {
       const photoId = `${albumUrlId}_photo_${index}`;
