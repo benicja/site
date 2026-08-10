@@ -685,7 +685,9 @@ if (resolveAuth) {
       <slot />
     </main>
 
-    <footer class="py-10 text-center">
+    <!-- No top padding: the page's own bottom padding forms the gap above the
+         label, so the space above and below it comes out equal -->
+    <footer class="pt-0 pb-4 sm:pb-10 text-center">
       <a
         href="/privacy"
         class="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-300 hover:text-gray-900 transition-colors"

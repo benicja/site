@@ -17,24 +17,50 @@ const { data, slug } = recipe;
 const totalTime = data.prep_time + data.cook_time;
 ---
 
-<style>
+<style is:global>
   .heart-button {
     -webkit-tap-highlight-color: transparent !important;
   }
 
-  @keyframes heart-burst {
+  /* The click already confirms itself visually; the focus ring only ever
+     showed up as a stray dark box over the photo */
+  .heart-button:focus,
+  .heart-button:focus-visible {
+    outline: none;
+  }
+
+  /* Springy pop when hearting */
+  @keyframes heart-pop {
+    0% { transform: scale(1); }
+    30% { transform: scale(0.75); }
+    60% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+
+  .top-heart-icon.is-popping {
+    animation: heart-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Soft ring rippling outward from the heart (global: the span is created
+     from script, so scoped styles would never match it) */
+  @keyframes heart-ring-out {
     0% {
-      transform: translate(0, 0) scale(1);
-      opacity: 1;
+      transform: scale(0.5);
+      opacity: 0.9;
     }
     100% {
-      transform: translate(var(--tx), var(--ty)) scale(0);
+      transform: scale(1.8);
       opacity: 0;
     }
   }
 
-  .heart-particle {
-    animation: heart-burst 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards !important;
+  .heart-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    border: 2px solid rgba(239, 68, 68, 0.75);
+    pointer-events: none;
+    animation: heart-ring-out 500ms ease-out forwards;
   }
 </style>
 
@@ -134,7 +160,7 @@ const totalTime = data.prep_time + data.cook_time;
   <div class="absolute top-3 right-3 z-[30]">
     <button 
       type="button"
-      class="heart-button transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
+      class="heart-button relative transition-all duration-300 hover:scale-110 active:scale-95 focus:outline-none focus:ring-0 cursor-pointer p-1 select-none bg-transparent border-none appearance-none"
       data-slug={slug}
       data-hearted={isHearted.toString()}
       data-user={user ? 'true' : 'false'}
@@ -152,61 +178,20 @@ const totalTime = data.prep_time + data.cook_time;
 </article>
 
 <script>
-  function createHeartBurst(button: HTMLElement) {
-    const rect = button.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    // Create 12 particles
-    const particleCount = 12;
-    for (let i = 0; i < particleCount; i++) {
-      const particle = document.createElement('div');
-      
-      // Random angle around the circle
-      const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-      const distance = 80 + Math.random() * 40;
-      
-      const tx = Math.cos(angle) * distance;
-      const ty = Math.sin(angle) * distance - 20; // Slight upward bias
-      
-      // Create keyframes for this specific particle
-      const keyframeName = `burst-${Math.random().toString(36).substring(7)}`;
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes ${keyframeName} {
-          0% {
-            transform: translate(0, 0) scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: translate(${tx}px, ${ty}px) scale(0);
-            opacity: 0;
-          }
-        }
-        .${keyframeName}-particle {
-          animation: ${keyframeName} 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      particle.className = `${keyframeName}-particle`;
-      particle.innerHTML = '❤️';
-      particle.style.position = 'fixed';
-      particle.style.left = centerX + 'px';
-      particle.style.top = centerY + 'px';
-      particle.style.fontSize = '20px';
-      particle.style.pointerEvents = 'none';
-      particle.style.zIndex = '9999';
-      particle.style.willChange = 'transform, opacity';
-      
-      document.body.appendChild(particle);
-      
-      // Remove after animation completes
-      setTimeout(() => {
-        particle.remove();
-        style.remove();
-      }, 800);
+  // Springy heart pop with a soft ring rippling outward
+  function playHeartPop(button: HTMLElement) {
+    const svg = button.querySelector('.top-heart-icon');
+    if (svg) {
+      svg.classList.remove('is-popping');
+      void (svg as HTMLElement).getBoundingClientRect(); // restart if mid-animation
+      svg.classList.add('is-popping');
+      setTimeout(() => svg.classList.remove('is-popping'), 500);
     }
+
+    const ring = document.createElement('span');
+    ring.className = 'heart-ring';
+    button.appendChild(ring);
+    setTimeout(() => ring.remove(), 550);
   }
 
   function showNotification(msg: string) {
@@ -293,9 +278,9 @@ const totalTime = data.prep_time + data.cook_time;
           updateUI(nowHearted);
           updateCount(nowHearted);
 
-          // Create burst effect when hearting
+          // Pop effect when hearting
           if (nowHearted) {
-            createHeartBurst(button as HTMLElement);
+            playHeartPop(button as HTMLElement);
             const title = card?.getAttribute('data-recipe-title') || 'Recipe';
             showNotification(`Added ${title} to favourites`);
           }
