@@ -400,7 +400,14 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <button 
+                  <button
+                    class="refresh-album-btn text-[11px] font-bold px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg uppercase tracking-tighter hover:bg-blue-200 transition-colors"
+                    data-album-url={album.album_url}
+                    title="Re-sync this album from its Google Photos share link"
+                  >
+                    Refresh
+                  </button>
+                  <button
                     class="delete-album-btn text-[11px] font-bold px-3 py-1.5 bg-red-100 text-red-600 rounded-lg uppercase tracking-tighter hover:bg-red-200 transition-colors"
                     data-album-id={album.google_album_id}
                     title="Delete this album"
@@ -1538,6 +1545,53 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
               setTimeout(() => window.location.reload(), 1000);
             } else {
               throw new Error(result.error || 'Failed to delete album');
+            }
+          } catch (err) {
+            alert(`Error: ${err.message}`);
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            btn.textContent = originalText;
+          }
+        });
+
+        btn._hasHandler = true;
+      });
+
+      const refreshButtons = document.querySelectorAll('.refresh-album-btn');
+      refreshButtons.forEach(btn => {
+        if (btn._hasHandler) return;
+
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const albumUrl = btn.dataset.albumUrl;
+          if (!albumUrl) {
+            alert('No share link stored for this album — re-add it via Add Albums instead.');
+            return;
+          }
+
+          btn.disabled = true;
+          const originalText = btn.textContent;
+          btn.classList.add('opacity-50');
+          btn.textContent = 'Refreshing...';
+
+          try {
+            const response = await fetch('/api/gallery/sync-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: albumUrl })
+            });
+
+            const result = await response.json();
+
+            if (response.status === 429) {
+              throw new Error(result.error || 'Google rate limit exceeded. Wait a few minutes and try again.');
+            }
+
+            if (result.success) {
+              btn.textContent = 'Refreshed';
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              throw new Error(result.error || 'Failed to refresh album');
             }
           } catch (err) {
             alert(`Error: ${err.message}`);
