@@ -17,6 +17,14 @@ function isSpeculative(request: Request) {
   );
 }
 
+// Only same-site paths are valid return targets — anything else falls back
+// to home so the redirect can't be pointed off-site
+function safeNext(url: URL): string {
+  const next = url.searchParams.get('next') || '/';
+  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return '/';
+  return next;
+}
+
 export const GET: APIRoute = async ({ cookies, redirect, request }) => {
   if (isSpeculative(request)) {
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
@@ -25,14 +33,14 @@ export const GET: APIRoute = async ({ cookies, redirect, request }) => {
   // Clear session cookie
   cookies.delete(SESSION_COOKIE, { path: '/' });
 
-  // Redirect to home
-  return redirect('/');
+  // Return to the page the user logged out from; its own auth gating
+  // decides what a signed-out visitor may still see
+  return redirect(safeNext(new URL(request.url)));
 };
 
-export const POST: APIRoute = async ({ cookies, redirect }) => {
+export const POST: APIRoute = async ({ cookies, redirect, request }) => {
   // Clear session cookie
   cookies.delete(SESSION_COOKIE, { path: '/' });
 
-  // Redirect to home
-  return redirect('/');
+  return redirect(safeNext(new URL(request.url)));
 };

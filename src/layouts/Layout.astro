@@ -40,6 +40,9 @@ if (resolveAuth && user && typeof isAdminProp !== 'boolean') {
 }
 
 const currentPath = Astro.url.pathname;
+// Logging out returns to the page it happened on (auth gating there decides
+// what's still visible); the query string survives so share links keep working
+const logoutHref = `/auth/logout?next=${encodeURIComponent(currentPath + Astro.url.search)}`;
 
 if (resolveAuth) {
   Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
@@ -394,7 +397,7 @@ if (resolveAuth) {
                       </button>
                       <div data-profile-dropdown class="hidden absolute right-0 top-[calc(100%+10px)] min-w-[180px] p-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50" role="menu">
                         <a
-                          href="/auth/logout"
+                          href={logoutHref}
                           data-astro-prefetch="false"
                           role="menuitem"
                           class="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
@@ -456,7 +459,7 @@ if (resolveAuth) {
                         </button>
                         <div data-profile-dropdown class="hidden absolute right-0 top-[calc(100%+10px)] min-w-[180px] p-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50" role="menu">
                           <a
-                            href="/auth/logout"
+                            href={logoutHref}
                             data-astro-prefetch="false"
                             role="menuitem"
                             class="block w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
@@ -542,7 +545,7 @@ if (resolveAuth) {
                       <p class="text-sm font-medium text-gray-900 truncate max-w-[170px]">{user.user_name || user.user_email}</p>
                     </div>
                   </div>
-                  <a href="/auth/logout"
+                  <a href={logoutHref}
                           data-astro-prefetch="false" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
                     Logout
                   </a>
@@ -582,7 +585,7 @@ if (resolveAuth) {
                         <p data-auth-name class="text-sm font-medium text-gray-900 truncate max-w-[170px]"></p>
                       </div>
                     </div>
-                    <a href="/auth/logout"
+                    <a href={logoutHref}
                           data-astro-prefetch="false" class="text-xs font-bold uppercase tracking-[0.2em] text-red-500">
                       Logout
                     </a>
@@ -783,7 +786,7 @@ if (resolveAuth) {
 
           // Leaving via logout: drop the cached auth state now so the next
           // page's pre-paint bridge doesn't flash a stale signed-in chip
-          if (target.closest('a[href="/auth/logout"]')) {
+          if (target.closest('a[href^="/auth/logout"]')) {
             try {
               sessionStorage.removeItem('auth_me_v1');
             } catch {}
