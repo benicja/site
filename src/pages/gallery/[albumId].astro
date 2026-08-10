@@ -3,7 +3,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
-import { getAlbumById, getPhotosByAlbumId, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
+import { getAlbumById, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
 import { getAlbumIdForToken, getShareTokenForAlbum } from '../../lib/galleryAccess';
 import AlbumCommentSection from '../../components/AlbumCommentSection';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
@@ -18,20 +18,23 @@ if (!albumId) {
 Astro.response.headers.set('X-Robots-Tag', 'noindex');
 
 const sessionId = Astro.cookies.get(SESSION_COOKIE)?.value;
-const user = sessionId ? await getUserFromSession(sessionId) : null;
+const shareParam = Astro.url.searchParams.get('share');
+
+// Independent lookups run together — this page must respond fast, since the
+// photo grid itself is fetched client-side after it paints
+const [user, album, tokenAlbum] = await Promise.all([
+  sessionId ? getUserFromSession(sessionId) : Promise.resolve(null),
+  getAlbumById(albumId),
+  shareParam ? getAlbumIdForToken(shareParam) : Promise.resolve(null)
+]);
+
 const approvedUser = user ? await getApprovedUser(user.user_email) : null;
 const isApproved = !!approvedUser;
 const isAdmin = approvedUser?.role === 'admin';
 
 // A valid share token grants this one album to any signed-in user
-const shareParam = Astro.url.searchParams.get('share');
-let shareAccess = false;
-if (shareParam) {
-  const tokenAlbum = await getAlbumIdForToken(shareParam);
-  shareAccess = tokenAlbum === albumId;
-}
+const shareAccess = tokenAlbum === albumId;
 
-const album = await getAlbumById(albumId);
 if (!album) {
   return Astro.redirect('/gallery');
 }
@@ -46,10 +49,9 @@ const nextUrl = shareParam
   : Astro.url.pathname;
 const loginHref = `/auth/login?next=${encodeURIComponent(nextUrl)}`;
 
-const photos = viewState === 'view' ? await getPhotosByAlbumId(albumId) : [];
-
 // Media requests from share-based viewers must carry the token; approved
-// members authorise by session alone
+// members authorise by session alone. The photo list itself is fetched
+// client-side from /api/gallery/photos so navigation lands instantly.
 const shareSuffix =
   viewState === 'view' && !isApproved && shareParam
     ? `&share=${encodeURIComponent(shareParam)}`
@@ -556,7 +558,7 @@ const existingShareToken =
       <div>
         <h1 class="text-3xl font-bold text-gray-900 mb-2">{getDisplayTitle(album.title)}</h1>
         <p class="text-sm text-gray-600">
-          {photos.length} items • {getDisplayDate(album.title, album.created_at)}
+          {album.photo_count ?? 0} items • {getDisplayDate(album.title, album.created_at)}
         </p>
       </div>
       {isAdmin && (
@@ -739,46 +741,19 @@ const existingShareToken =
       <h2 class="text-xl font-serif text-gray-400">No photos found for this album.</h2>
     </div>
 
-    <!-- Photo Grid -->
-    <div 
-      id="photo-grid" 
+    <!-- Photo Grid: filled client-side from /api/gallery/photos so the page
+         itself lands instantly and the spinner covers the wait -->
+    <div
+      id="photo-grid"
       class="relative w-full overflow-hidden"
+      data-album-id={albumId}
+      data-share-suffix={shareSuffix}
     >
-      {photos.map((photo) => {
-        const encodedUrl = encodeURIComponent(photo.image_url);
-        const isVideo = photo.media_type === 'video';
-        const fullUrl = isVideo ? `/api/gallery/video?url=${encodedUrl}${shareSuffix}` : `/api/gallery/image?url=${encodedUrl}&w=1000${shareSuffix}`;
-        const thumbUrl = `/api/gallery/image?url=${encodedUrl}&w=800${shareSuffix}`;
-        const videoData = isVideo
-          ? JSON.stringify({
-              source: [{ src: fullUrl, type: 'video/mp4' }],
-              poster: thumbUrl,
-              attributes: { controls: true, preload: 'auto', playsinline: true }
-            })
-          : undefined;
-
-        return (
-          <a 
-            href={fullUrl}
-            class={`photo-item absolute transition-all duration-300 hover:scale-[1.02] hover:z-10${isVideo ? ' is-video' : ''}`}
-            data-fancybox="gallery"
-            data-type={isVideo ? 'html5video' : undefined}
-            data-video={videoData}
-          >
-            <img 
-              src={thumbUrl}
-              alt="Family moment"
-              class="w-full h-full object-cover rounded-xl border border-gray-100 group-hover:border-gray-900 transition-all shadow-none"
-              loading="lazy"
-            />
-          </a>
-        );
-      })}
     </div>
 
-    <!-- Comments Section -->
-    <div class="mt-16">
-      <AlbumCommentSection 
+    <!-- Comments Section: revealed once the photo grid has finished loading -->
+    <div id="album-comments" class="mt-16 hidden">
+      <AlbumCommentSection
         client:load
         albumId={albumId}
         user={user ? {
@@ -797,21 +772,88 @@ const existingShareToken =
 <script>
   import { initGallery } from '../../lib/galleryInit';
 
+  const buildPhotoItem = (
+    photo: { image_url: string; media_type?: string },
+    shareSuffix: string
+  ) => {
+    const encodedUrl = encodeURIComponent(photo.image_url);
+    const isVideo = photo.media_type === 'video';
+    const fullUrl = isVideo
+      ? `/api/gallery/video?url=${encodedUrl}${shareSuffix}`
+      : `/api/gallery/image?url=${encodedUrl}&w=1000${shareSuffix}`;
+    const thumbUrl = `/api/gallery/image?url=${encodedUrl}&w=800${shareSuffix}`;
+
+    const anchor = document.createElement('a');
+    anchor.href = fullUrl;
+    anchor.className = `photo-item absolute transition-all duration-300 hover:scale-[1.02] hover:z-10${isVideo ? ' is-video' : ''}`;
+    anchor.setAttribute('data-fancybox', 'gallery');
+    if (isVideo) {
+      anchor.setAttribute('data-type', 'html5video');
+      anchor.setAttribute(
+        'data-video',
+        JSON.stringify({
+          source: [{ src: fullUrl, type: 'video/mp4' }],
+          poster: thumbUrl,
+          attributes: { controls: true, preload: 'auto', playsinline: true }
+        })
+      );
+    }
+
+    const img = document.createElement('img');
+    img.src = thumbUrl;
+    img.alt = 'Family moment';
+    img.className =
+      'w-full h-full object-cover rounded-xl border border-gray-100 group-hover:border-gray-900 transition-all shadow-none';
+    anchor.appendChild(img);
+    return anchor;
+  };
+
+  const showEmptyState = () => {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) spinner.style.display = 'none';
+    const emptyState = document.getElementById('empty-state');
+    if (emptyState) emptyState.classList.remove('hidden');
+  };
+
   const safeInit = async () => {
+    const grid = document.getElementById('photo-grid');
+    if (!grid) return; // signed-out / no-access views have no grid
+
     try {
+      // First run fetches the photo list; resizes and re-inits just re-layout
+      if (grid.dataset.loaded !== '1') {
+        const albumId = grid.dataset.albumId || '';
+        const shareSuffix = grid.dataset.shareSuffix || '';
+        const shareMatch = shareSuffix.match(/^&share=(.+)$/);
+        const res = await fetch(
+          `/api/gallery/photos?album_id=${encodeURIComponent(albumId)}${
+            shareMatch ? `&share=${shareMatch[1]}` : ''
+          }`
+        );
+        if (!res.ok) throw new Error(`Photo fetch failed (${res.status})`);
+        const { photos } = await res.json();
+
+        grid.replaceChildren(
+          ...photos.map((photo: { image_url: string; media_type?: string }) =>
+            buildPhotoItem(photo, shareSuffix)
+          )
+        );
+        grid.dataset.loaded = '1';
+      }
+
       await initGallery();
+
+      // Comments stay out of sight until the album itself is in place
+      document.getElementById('album-comments')?.classList.remove('hidden');
     } catch (error) {
-      const spinner = document.getElementById('loading-spinner');
-      if (spinner) spinner.style.display = 'none';
-      const emptyState = document.getElementById('empty-state');
-      if (emptyState) emptyState.classList.remove('hidden');
+      showEmptyState();
       console.error('Gallery init failed', error);
     }
   };
 
   safeInit();
   document.addEventListener('astro:after-swap', safeInit);
-  
+
   // Re-layout on window resize
   let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener('resize', () => {
