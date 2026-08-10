@@ -29,38 +29,17 @@ const totalTime = data.prep_time + data.cook_time;
     outline: none;
   }
 
-  /* Springy pop when hearting */
-  @keyframes heart-pop {
+  /* A quick double thump, like an actual heartbeat */
+  @keyframes heart-beat {
     0% { transform: scale(1); }
-    30% { transform: scale(0.75); }
-    60% { transform: scale(1.3); }
+    25% { transform: scale(1.22); }
+    40% { transform: scale(1.06); }
+    60% { transform: scale(1.26); }
     100% { transform: scale(1); }
   }
 
-  .top-heart-icon.is-popping {
-    animation: heart-pop 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  /* Soft ring rippling outward from the heart (global: the span is created
-     from script, so scoped styles would never match it) */
-  @keyframes heart-ring-out {
-    0% {
-      transform: scale(0.5);
-      opacity: 0.9;
-    }
-    100% {
-      transform: scale(1.8);
-      opacity: 0;
-    }
-  }
-
-  .heart-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    border: 2px solid rgba(239, 68, 68, 0.75);
-    pointer-events: none;
-    animation: heart-ring-out 500ms ease-out forwards;
+  .top-heart-icon.is-beating {
+    animation: heart-beat 650ms ease-in-out;
   }
 </style>
 
@@ -178,20 +157,14 @@ const totalTime = data.prep_time + data.cook_time;
 </article>
 
 <script>
-  // Springy heart pop with a soft ring rippling outward
+  // Double-thump heartbeat on the icon itself — no extra elements
   function playHeartPop(button: HTMLElement) {
     const svg = button.querySelector('.top-heart-icon');
-    if (svg) {
-      svg.classList.remove('is-popping');
-      void (svg as HTMLElement).getBoundingClientRect(); // restart if mid-animation
-      svg.classList.add('is-popping');
-      setTimeout(() => svg.classList.remove('is-popping'), 500);
-    }
-
-    const ring = document.createElement('span');
-    ring.className = 'heart-ring';
-    button.appendChild(ring);
-    setTimeout(() => ring.remove(), 550);
+    if (!svg) return;
+    svg.classList.remove('is-beating');
+    void (svg as HTMLElement).getBoundingClientRect(); // restart if mid-animation
+    svg.classList.add('is-beating');
+    setTimeout(() => svg.classList.remove('is-beating'), 700);
   }
 
   function showNotification(msg: string) {
