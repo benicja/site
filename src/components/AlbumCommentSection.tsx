@@ -353,9 +353,7 @@ export default function AlbumCommentSection({ albumId, user, isAdmin = false }: 
       )}
 
       <div className="comments-list">
-        {comments.length === 0 ? (
-          <p className="no-comments">No comments yet. Be the first to share your thoughts!</p>
-        ) : (
+        {comments.length === 0 ? null : (
           comments.map((comment) => (
             <div key={comment.id} className="comment-item">
               <div className="comment-header">
