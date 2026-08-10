@@ -293,7 +293,6 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
 
     function initSearch() {
       const searchInput = document.getElementById('recipe-search') as HTMLInputElement | null;
-      const recipeItems = document.querySelectorAll('.recipe-item') as NodeListOf<HTMLElement>;
       const recipesGrid = document.getElementById('recipes-grid');
       const noResults = document.getElementById('no-results');
       const filterBtns = document.querySelectorAll('.filter-btn');
@@ -319,9 +318,16 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
 
         const query = normalize(searchInput.value.trim());
         let hasResults = false;
+        let enterIndex = 0;
 
+        // Iterate in current DOM order (custom ordering may have reshuffled
+        // the grid after this NodeList was captured) so the entrance stagger
+        // follows on-screen position
+        const orderedItems = Array.from(
+          recipesGrid.querySelectorAll('.recipe-item')
+        ) as HTMLElement[];
 
-        recipeItems.forEach(item => {
+        orderedItems.forEach(item => {
           const title = normalize(item.getAttribute('data-title') || '');
           const category = item.getAttribute('data-category');
           const isHearted = item.getAttribute('data-hearted') === 'true';
@@ -338,9 +344,19 @@ const formatCategories = (value: unknown): string => (Array.isArray(value) ? val
           let matchesHearted = !showHeartedOnly || isHearted;
 
           const shouldShow = matchesSearch && matchesCategory && matchesHearted;
+          const wasHidden = item.hidden;
           item.hidden = !shouldShow;
           if (shouldShow) {
             hasResults = true;
+            // Leaving display:none restarts the rise animation, so entering
+            // cards must be staggered by their position within the filtered
+            // set — the delay baked in at page load reflects the full grid
+            // and made cards appear out of order
+            if (wasHidden) {
+              item.classList.add('rise');
+              item.style.setProperty('--rise-delay', Math.min(enterIndex, 12) * 40 + 'ms');
+              enterIndex++;
+            }
           }
         });
 
