@@ -54,7 +54,12 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
   }
 </style>
 
-<Layout title={pageTitle} description={pageDesc} resolveAuth={false}>
+<Layout
+  title={pageTitle}
+  description={pageDesc}
+  ogImage={!isGhost && data.featured_image ? data.featured_image : undefined}
+  resolveAuth={false}
+>
   <div class="recipe-page" data-is-ghost={isGhost ? "true" : "false"}>
     <div class="recipe-shell">
       <section class="recipe-hero rise">

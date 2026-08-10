@@ -8,6 +8,7 @@ import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../lib/auth
 interface Props {
   title: string;
   description?: string;
+  ogImage?: string;
   user?: any;
   isAdmin?: boolean;
   resolveAuth?: boolean;
@@ -17,11 +18,15 @@ interface Props {
 const {
   title,
   description = "Benicja's Family Gallery & Recipes",
+  ogImage,
   user: userProp,
   isAdmin: isAdminProp,
   resolveAuth = true,
   enableTransitions = true
 } = Astro.props;
+
+// Absolute URL for link-preview crawlers (WhatsApp etc. reject relative ones)
+const ogImageUrl = ogImage ? new URL(ogImage, Astro.site ?? Astro.url).href : null;
 
 // Only touch cookies when auth is resolved server-side; prerendered pages
 // have no request and would warn at build time
@@ -58,6 +63,13 @@ if (resolveAuth) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="same-origin" />
     <meta name="google-site-verification" content="Rg2Ai6YkTrQsPXB7I0oiSQta4HxbsxgrMWv5MCcY8TU" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Benicja's Kitchen" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.url.href} />
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    {ogImageUrl && <meta name="twitter:card" content="summary_large_image" />}
     <script is:inline>
       // Pre-paint auth bridge: mark the html element with the cached
       // signed-in state before anything renders, so the navbar never
