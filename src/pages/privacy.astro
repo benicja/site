@@ -1,0 +1,99 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+
+const lastUpdated = 'August 2026';
+---
+
+<style>
+  @keyframes page-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .privacy-page {
+    animation: page-fade-in 0.25s ease-out;
+  }
+</style>
+
+<Layout title="Privacy Policy" description="How this site handles your data">
+  <div class="privacy-page max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="text-center mb-16">
+      <h1 class="text-5xl font-serif font-bold text-gray-900 mb-6">Privacy Policy</h1>
+      <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Last updated {lastUpdated}</p>
+    </div>
+
+    <div class="bg-white border border-gray-100 rounded-sm shadow-2xl p-10 md:p-16 space-y-12">
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">Who we are</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          This is a personal family website for sharing recipes and private photo albums.
+          It is run by us, not a company, and we only handle the small amount of data
+          needed to keep the gallery private and the comments working.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">What we collect</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          When you sign in with Google, we receive and store your email address, display
+          name, and profile picture. If you request gallery access, we also store the
+          name and message you submit. If you post comments or heart a recipe or photo,
+          those are stored alongside your account.
+        </p>
+        <p class="text-gray-600 font-light leading-relaxed">
+          That's it — we don't collect analytics, run ads, track you across other sites,
+          or gather anything beyond what you actively give us.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">How it's used</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          Your email identifies you when deciding who may view the private gallery, your
+          name and picture appear next to your comments, and we may email you about your
+          access request. We never sell your data or share it with anyone for marketing.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">Where it lives</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          Account and comment data is stored with Supabase (a hosted database), the site
+          itself runs on Netlify, and any emails we send go through Resend. Photos are
+          hosted by Google Photos. Your shopping list and recipe cache are kept only in
+          your own browser, never on our servers.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">Cookies</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          We use a single session cookie to keep you signed in. There are no advertising
+          or tracking cookies.
+        </p>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400">Your choices</h2>
+        <p class="text-gray-600 font-light leading-relaxed">
+          You can ask us at any time to see or delete everything we hold about you —
+          your account, comments, hearts, and any access request. Just email
+          <a href="mailto:ben@nanoblox.com" class="text-gray-900 underline decoration-gray-300 underline-offset-4 hover:decoration-gray-900 transition-colors">ben@nanoblox.com</a>
+          and we'll take care of it.
+        </p>
+      </section>
+    </div>
+
+    <div class="text-center mt-12">
+      <a href="/" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-900 transition-colors">
+        ← Back Home
+      </a>
+    </div>
+  </div>
+</Layout>
