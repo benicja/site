@@ -685,16 +685,19 @@ if (resolveAuth) {
       <slot />
     </main>
 
-    <!-- No top padding: the page's own bottom padding forms the gap above the
-         label, so the space above and below it comes out equal -->
-    <footer class="pt-0 pb-4 sm:pb-10 text-center">
-      <a
-        href="/privacy"
-        class="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-300 hover:text-gray-900 transition-colors"
-      >
-        Privacy Policy
-      </a>
-    </footer>
+    <!-- Only the two top-level listing pages carry the privacy link; no top
+         padding, so the page's own bottom padding forms the gap above the
+         label and the space above and below it comes out equal -->
+    {['/recipes', '/gallery'].includes(currentPath.replace(/\/+$/, '')) && (
+      <footer class="pt-0 pb-4 sm:pb-10 text-center">
+        <a
+          href="/privacy"
+          class="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-300 hover:text-gray-900 transition-colors"
+        >
+          Privacy Policy
+        </a>
+      </footer>
+    )}
 
     <style is:global>
       .shopping-list-widget-container {
