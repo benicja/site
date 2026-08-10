@@ -10,6 +10,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 
+  if (user.banned) {
+    return new Response(
+      JSON.stringify({ error: 'This account is restricted from commenting and hearting' }),
+      { status: 403 }
+    );
+  }
+
   const { slug } = await request.json();
   if (!slug) {
     return new Response(JSON.stringify({ error: 'Missing recipe slug' }), { status: 400 });

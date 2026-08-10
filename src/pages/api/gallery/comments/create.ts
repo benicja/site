@@ -22,6 +22,13 @@ export const POST: APIRoute = async (context) => {
       );
     }
 
+    if (user.banned) {
+      return new Response(
+        JSON.stringify({ error: 'This account is restricted from commenting and hearting' }),
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const body = await context.request.json();
     const { album_id, content } = body;

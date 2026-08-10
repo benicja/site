@@ -78,6 +78,18 @@ const { data: approvedUsers } = await supabaseAdmin
   .order('approved_at', { ascending: false });
 
 const activeUsers = (approvedUsers as ApprovedUser[]) || [];
+
+// Everyone who has ever signed in — user_sessions keeps one row per Google
+// account (upserted on email), so it doubles as the account list
+const { data: sessionUsers } = await supabaseAdmin
+  .from('user_sessions')
+  .select('*')
+  .order('last_login', { ascending: false });
+
+const allUsers = (sessionUsers || []).filter((u) => u.user_email);
+const approvedRoleByEmail = new Map(activeUsers.map((a) => [a.email, a.role]));
+// Lets the requests/approved tabs show the Google avatar and display name
+const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
 ---
 
 <Layout title="Site Administration" description="Manage gallery and site configuration" user={user} isAdmin={isAdmin}>
@@ -93,6 +105,14 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
             data-users-target="requests"
           >
             Access Requests ({pendingRequests.length})
+          </button>
+          <button
+            type="button"
+            id="toggle-all-users-btn"
+            class="toggle-users-btn px-6 py-2 bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-300 transition-colors"
+            data-users-target="all"
+          >
+            All Users ({allUsers.length})
           </button>
           <button
             type="button"
@@ -127,12 +147,28 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
               <div
                 class="request-row border border-gray-100 rounded-2xl p-6 flex flex-col gap-4"
                 data-request-id={request.id}
-                data-search={`${request.email} ${request.full_name || ''}`.toLowerCase()}
+                data-search={`${request.email} ${request.full_name || ''} ${sessionByEmail.get(request.email)?.user_name || ''}`.toLowerCase()}
               >
                 <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div>
-                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Email</p>
-                    <p class="text-sm font-semibold text-gray-900 mt-1">{request.email}</p>
+                  <div class="flex items-center gap-3">
+                    {sessionByEmail.get(request.email)?.user_avatar ? (
+                      <img
+                        src={sessionByEmail.get(request.email)?.user_avatar}
+                        alt=""
+                        referrerpolicy="no-referrer"
+                        class="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+                      />
+                    ) : (
+                      <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm font-bold shrink-0">
+                        {request.email[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p class="text-sm font-semibold text-gray-900">
+                        {sessionByEmail.get(request.email)?.user_name || request.full_name || request.email}
+                      </p>
+                      <p class="text-sm text-gray-500">{request.email}</p>
+                    </div>
                   </div>
                   <div>
                     <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Name</p>
@@ -175,6 +211,86 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
           <div class="users-no-match hidden text-sm text-gray-500 mt-2">No matches.</div>
         </div>
 
+        <div id="all-users-section" class="users-section hidden">
+        {allUsers.length > 0 ? (
+          <div class="space-y-3 pr-1" id="all-users" data-users-list>
+            {allUsers.map((account) => {
+              const role = approvedRoleByEmail.get(account.user_email);
+              const isSelf = account.user_email === user?.user_email;
+              const isBanned = !!account.banned;
+              return (
+                <div
+                  class="all-user-row border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                  data-search={`${account.user_email} ${account.user_name || ''}`.toLowerCase()}
+                >
+                  <div class="flex items-center gap-3">
+                    {account.user_avatar ? (
+                      <img
+                        src={account.user_avatar}
+                        alt=""
+                        referrerpolicy="no-referrer"
+                        class="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+                      />
+                    ) : (
+                      <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm font-bold shrink-0">
+                        {account.user_email[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p class="text-sm font-semibold text-gray-900">{account.user_name || account.user_email}</p>
+                      <p class="text-sm text-gray-500">{account.user_email}</p>
+                      <div class="mt-2 flex items-center gap-2 flex-wrap">
+                        {role === 'admin' && (
+                          <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-gray-900 text-white">Admin</span>
+                        )}
+                        {role && role !== 'admin' && (
+                          <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-green-100 text-green-700">Approved</span>
+                        )}
+                        {!role && !isBanned && (
+                          <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-gray-100 text-gray-500">Not approved</span>
+                        )}
+                        {isBanned && (
+                          <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-red-100 text-red-600">Banned</span>
+                        )}
+                        <span class="text-xs text-gray-400">Last login {new Date(account.last_login || account.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {!isSelf && role !== 'admin' && (
+                    <div class="flex items-center gap-3 flex-wrap">
+                      {!role && (
+                        <button
+                          class="user-approve-btn px-5 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-colors"
+                          data-user-email={account.user_email}
+                        >
+                          Approve
+                        </button>
+                      )}
+                      <button
+                        class={`${isBanned ? 'user-unban-btn' : 'user-ban-btn'} px-5 py-2 bg-white text-xs font-bold uppercase tracking-widest rounded-full border transition-colors ${isBanned ? 'text-gray-900 border-gray-200 hover:border-gray-900' : 'text-amber-600 border-amber-100 hover:border-amber-300 hover:text-amber-700'}`}
+                        data-user-email={account.user_email}
+                      >
+                        {isBanned ? 'Unban' : 'Ban'}
+                      </button>
+                      <button
+                        class="user-delete-btn px-5 py-2 bg-white text-red-600 text-xs font-bold uppercase tracking-widest rounded-full border border-red-100 hover:border-red-300 hover:text-red-700 transition-colors"
+                        data-user-email={account.user_email}
+                      >
+                        Delete
+                      </button>
+                      <span class="user-action-status text-xs text-gray-400"></span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div class="text-sm text-gray-500">Nobody has logged in yet.</div>
+        )}
+          <div class="users-no-match hidden text-sm text-gray-500 mt-2">No matches.</div>
+        </div>
+
         <div id="approved-users-section" class="users-section hidden">
         {activeUsers.length > 0 ? (
           <div class="space-y-3 pr-1" id="approved-users" data-users-list>
@@ -182,16 +298,32 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
               <div
                 class="approved-row border border-gray-100 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                 data-approved-id={approved.id}
-                data-search={approved.email.toLowerCase()}
+                data-search={`${approved.email} ${sessionByEmail.get(approved.email)?.user_name || ''}`.toLowerCase()}
               >
-                <div>
-                  <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Email</p>
-                  <p class="text-sm font-semibold text-gray-900 mt-1">{approved.email}</p>
-                  <div class="mt-2 flex items-center gap-2">
-                    <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-gray-100 text-gray-500">
-                      {approved.role === 'admin' ? 'Admin' : 'User'}
-                    </span>
-                    <span class="text-xs text-gray-400">Approved {new Date(approved.approved_at).toLocaleDateString()}</span>
+                <div class="flex items-center gap-3">
+                  {sessionByEmail.get(approved.email)?.user_avatar ? (
+                    <img
+                      src={sessionByEmail.get(approved.email)?.user_avatar}
+                      alt=""
+                      referrerpolicy="no-referrer"
+                      class="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+                    />
+                  ) : (
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm font-bold shrink-0">
+                      {approved.email[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">
+                      {sessionByEmail.get(approved.email)?.user_name || approved.email}
+                    </p>
+                    <p class="text-sm text-gray-500">{approved.email}</p>
+                    <div class="mt-2 flex items-center gap-2">
+                      <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+                        {approved.role === 'admin' ? 'Admin' : 'User'}
+                      </span>
+                      <span class="text-xs text-gray-400">Approved {new Date(approved.approved_at).toLocaleDateString()}</span>
+                    </div>
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -1270,6 +1402,60 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
         });
       }
 
+      // All Users tab: approve / ban / unban / delete by email
+      const userAction = (btn, action, confirmText) => {
+        if (btn._hasHandler) return;
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const email = btn.dataset.userEmail;
+          if (!email) return;
+          if (confirmText && !confirm(confirmText.replace('{email}', email))) return;
+
+          const row = btn.closest('.all-user-row');
+          const status = row?.querySelector('.user-action-status');
+          if (status) status.textContent = 'Working...';
+
+          try {
+            const response = await fetch('/api/admin/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action, email })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error || 'Action failed');
+            }
+            if (status) status.textContent = 'Done';
+            window.location.reload();
+          } catch (err) {
+            if (status) status.textContent = '';
+            alert(err.message || 'Action failed');
+          }
+        });
+        btn._hasHandler = true;
+      };
+
+      document.querySelectorAll('.user-approve-btn').forEach((btn) =>
+        userAction(btn, 'approve', null)
+      );
+      document.querySelectorAll('.user-ban-btn').forEach((btn) =>
+        userAction(
+          btn,
+          'ban',
+          'Ban {email}?\n\nTheir comments and hearts will be permanently deleted, and they will no longer be able to comment or heart anything on this account.'
+        )
+      );
+      document.querySelectorAll('.user-unban-btn').forEach((btn) =>
+        userAction(btn, 'unban', null)
+      );
+      document.querySelectorAll('.user-delete-btn').forEach((btn) =>
+        userAction(
+          btn,
+          'delete',
+          'Permanently delete {email}?\n\nThis wipes EVERYTHING: their account, comments, hearts, gallery approval and access requests. This cannot be undone.'
+        )
+      );
+
       const makeAdminButtons = document.querySelectorAll('.make-admin-btn');
       makeAdminButtons.forEach((btn) => {
         if (btn._hasHandler) return;
@@ -1655,9 +1841,11 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
       // Modern reorder drag, modelled on the HD Admin roles list: a floating
       // clone follows the pointer, the original stays as a translucent ghost
       // marking exactly where the row will land, and displaced rows glide out
-      // of the way with FLIP animations. Mouse drags start anywhere on a row;
-      // touch drags start from the dot handle so page scrolling still works
+      // of the way with FLIP animations. Drags start anywhere on a row; on
+      // touch the row must be held for half a second first so normal
+      // scrolling never picks one up by accident
       const DRAG_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+      const TOUCH_HOLD_MS = 500;
 
       function initModernDrag(listId, itemSelector, saveOrder) {
         const list = document.getElementById(listId);
@@ -1758,21 +1946,40 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
           document.body.style.cursor = '';
         };
 
+        const cancelPress = () => {
+          if (pressed?.holdTimer) clearTimeout(pressed.holdTimer);
+          pressed = null;
+        };
+
         list.addEventListener('pointerdown', (event) => {
           if (event.button !== 0) return;
           const target = event.target;
           if (!(target instanceof Element)) return;
           if (target.closest('button, a, input, textarea')) return;
-          if (event.pointerType !== 'mouse' && !target.closest('[data-drag-handle]')) return;
           const row = target.closest(itemSelector);
           if (!row || !list.contains(row)) return;
           pressed = { row, x: event.clientX, y: event.clientY };
+          // Touch drags anywhere on the row, but only after a hold; moving
+          // beforehand cancels the press and scrolls normally
+          if (event.pointerType !== 'mouse') {
+            pressed.holdTimer = setTimeout(() => {
+              if (!pressed || dragging) return;
+              startDrag();
+              try { navigator.vibrate?.(15); } catch {}
+            }, TOUCH_HOLD_MS);
+          }
         });
 
         const onMove = (event) => {
           if (!pressed) return;
           if (!dragging) {
-            if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) < 5) return;
+            const moved = Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y);
+            if (event.pointerType !== 'mouse') {
+              // Finger travelled before the hold completed — it's a scroll
+              if (moved > 10) cancelPress();
+              return;
+            }
+            if (moved < 5) return;
             startDrag();
           }
           event.preventDefault();
@@ -1782,10 +1989,22 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
           updateSlot(event.clientY);
         };
 
+        // Once a touch drag is live, the page must not pan underneath it;
+        // scrolling is suppressed at the touchmove level (pointermove
+        // preventDefault cannot stop it)
+        const onTouchMove = (event) => {
+          if (dragging) event.preventDefault();
+        };
+
+        // A completed hold would otherwise pop the long-press context menu
+        const onContextMenu = (event) => {
+          if (pressed || dragging) event.preventDefault();
+        };
+
         const onUp = async () => {
           if (!pressed) return;
           const wasDragging = dragging;
-          pressed = null;
+          cancelPress();
           dragging = false;
           if (!wasDragging) return;
           settle();
@@ -1801,11 +2020,20 @@ const activeUsers = (approvedUsers as ApprovedUser[]) || [];
           document.removeEventListener('pointermove', prev.move);
           document.removeEventListener('pointerup', prev.up);
           document.removeEventListener('pointercancel', prev.up);
+          document.removeEventListener('touchmove', prev.touchMove);
+          document.removeEventListener('contextmenu', prev.contextMenu);
         }
-        window.__dragDocHandlers[listId] = { move: onMove, up: onUp };
+        window.__dragDocHandlers[listId] = {
+          move: onMove,
+          up: onUp,
+          touchMove: onTouchMove,
+          contextMenu: onContextMenu
+        };
         document.addEventListener('pointermove', onMove, { passive: false });
         document.addEventListener('pointerup', onUp);
         document.addEventListener('pointercancel', onUp);
+        document.addEventListener('touchmove', onTouchMove, { passive: false });
+        document.addEventListener('contextmenu', onContextMenu);
       }
 
       const persistOrder = async (url, body) => {
