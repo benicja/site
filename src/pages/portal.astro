@@ -97,30 +97,30 @@ const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
     <div class="space-y-12">
       <!-- People: Access Requests / Approved Users -->
       <section class="bg-white border border-gray-100 rounded-3xl p-8 md:p-12">
-        <div class="flex items-center gap-4 mb-8">
+        <div class="flex items-center gap-2 sm:gap-4 mb-8">
           <button
             type="button"
             id="toggle-requests-btn"
-            class="toggle-users-btn px-6 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full transition-colors"
+            class="toggle-users-btn flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-2 bg-gray-900 text-white text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-widest whitespace-nowrap rounded-full transition-colors"
             data-users-target="requests"
           >
-            Access Requests ({pendingRequests.length})
+            Requests ({pendingRequests.length})
           </button>
           <button
             type="button"
             id="toggle-all-users-btn"
-            class="toggle-users-btn px-6 py-2 bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-300 transition-colors"
+            class="toggle-users-btn flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-2 bg-gray-200 text-gray-600 text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-widest whitespace-nowrap rounded-full hover:bg-gray-300 transition-colors"
             data-users-target="all"
           >
-            All Users ({allUsers.length})
+            Users ({allUsers.length})
           </button>
           <button
             type="button"
             id="toggle-approved-btn"
-            class="toggle-users-btn px-6 py-2 bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-300 transition-colors"
+            class="toggle-users-btn flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-2 bg-gray-200 text-gray-600 text-[11px] sm:text-xs font-bold uppercase tracking-wide sm:tracking-widest whitespace-nowrap rounded-full hover:bg-gray-300 transition-colors"
             data-users-target="approved"
           >
-            Approved Users ({activeUsers.length})
+            Approved ({activeUsers.length})
           </button>
         </div>
 
