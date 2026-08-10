@@ -450,6 +450,7 @@ const existingShareToken =
 
 <Layout
   title={`${getDisplayTitle(album.title)} - Gallery`}
+  ogTitle={getDisplayTitle(album.title)}
   description={`View photos from ${getDisplayTitle(album.title)}`}
   ogImage={album.cover_image_url
     ? `/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=600`

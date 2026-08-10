@@ -9,6 +9,7 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  ogTitle?: string;
   user?: any;
   isAdmin?: boolean;
   resolveAuth?: boolean;
@@ -19,6 +20,7 @@ const {
   title,
   description = "Benicja's Family Gallery & Recipes",
   ogImage,
+  ogTitle,
   user: userProp,
   isAdmin: isAdminProp,
   resolveAuth = true,
@@ -65,7 +67,7 @@ if (resolveAuth) {
     <meta name="google-site-verification" content="Rg2Ai6YkTrQsPXB7I0oiSQta4HxbsxgrMWv5MCcY8TU" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Benicja's Kitchen" />
-    <meta property="og:title" content={title} />
+    <meta property="og:title" content={ogTitle ?? title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={Astro.url.href} />
     {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
