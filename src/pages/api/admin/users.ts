@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (!admin) return json({ error: 'Unauthorized' }, 401);
 
   const { action, email } = await request.json();
-  if (!email || !['approve', 'ban', 'unban', 'delete'].includes(action)) {
+  if (!email || !['approve', 'revoke', 'ban', 'unban', 'delete'].includes(action)) {
     return json({ error: 'Invalid request' }, 400);
   }
 
@@ -87,6 +87,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           { onConflict: 'email' }
         );
       if (error) throw new Error('Failed to approve user');
+      return json({ success: true });
+    }
+
+    if (action === 'revoke') {
+      const { error } = await supabaseAdmin
+        .from('approved_users')
+        .delete()
+        .eq('email', email);
+      if (error) throw new Error('Failed to revoke access');
       return json({ success: true });
     }
 

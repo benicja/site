@@ -258,12 +258,19 @@ const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
                   </div>
                   {!isSelf && role !== 'admin' && (
                     <div class="flex items-center gap-3 flex-wrap">
-                      {!role && (
+                      {!role ? (
                         <button
                           class="user-approve-btn px-5 py-2 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-colors"
                           data-user-email={account.user_email}
                         >
                           Approve
+                        </button>
+                      ) : (
+                        <button
+                          class="user-revoke-btn px-5 py-2 bg-white text-gray-900 text-xs font-bold uppercase tracking-widest rounded-full border border-gray-200 hover:border-gray-900 transition-colors"
+                          data-user-email={account.user_email}
+                        >
+                          Revoke
                         </button>
                       )}
                       <button
@@ -346,13 +353,6 @@ const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
                       </button>
                     )
                   )}
-                  <button
-                    class="revoke-user-btn px-5 py-2 bg-white text-red-600 text-xs font-bold uppercase tracking-widest rounded-full border border-red-100 hover:border-red-300 hover:text-red-700 transition-colors"
-                    data-approved-id={approved.id}
-                    data-approved-email={approved.email}
-                  >
-                    Revoke
-                  </button>
                   <span class="revoke-status text-xs text-gray-400"></span>
                 </div>
               </div>
@@ -1448,6 +1448,9 @@ const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
       document.querySelectorAll('.user-unban-btn').forEach((btn) =>
         userAction(btn, 'unban', null)
       );
+      document.querySelectorAll('.user-revoke-btn').forEach((btn) =>
+        userAction(btn, 'revoke', 'Revoke gallery access for {email}?')
+      );
       document.querySelectorAll('.user-delete-btn').forEach((btn) =>
         userAction(
           btn,
@@ -1528,48 +1531,6 @@ const sessionByEmail = new Map(allUsers.map((u) => [u.user_email, u]));
           } catch (err) {
             if (status) status.textContent = 'Error updating';
             alert(err.message || 'Failed to update user role');
-          }
-        });
-
-        btn._hasHandler = true;
-      });
-
-      const revokeButtons = document.querySelectorAll('.revoke-user-btn');
-      revokeButtons.forEach((btn) => {
-        if (btn._hasHandler) return;
-
-        btn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          const approvedId = btn.dataset.approvedId;
-          const approvedEmail = btn.dataset.approvedEmail || 'this user';
-          if (!approvedId) return;
-
-          if (!confirm(`Revoke access for ${approvedEmail}?`)) return;
-
-          const row = btn.closest('.approved-row');
-          const status = row?.querySelector('.revoke-status');
-          if (status) status.textContent = 'Revoking...';
-
-          try {
-            const response = await fetch('/api/admin/approved-users', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: approvedId })
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-              throw new Error(result.error || 'Failed to revoke access');
-            }
-
-            if (status) status.textContent = 'Revoked';
-            if (row) {
-              row.style.opacity = '0.4';
-              setTimeout(() => row.remove(), 600);
-            }
-          } catch (err) {
-            if (status) status.textContent = 'Error revoking';
-            alert(err.message || 'Failed to revoke access');
           }
         });
 
