@@ -883,8 +883,9 @@ const existingShareToken =
     object-fit: contain !important;
   }
 
-  /* Video play button overlay on grid */
-  .photo-item.is-video::after {
+  /* Video play button overlay on grid. :global — the photo anchors are
+     created from script, so they never carry Astro's scoping attribute */
+  :global(.photo-item.is-video)::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -900,7 +901,7 @@ const existingShareToken =
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
-  .photo-item.is-video::before {
+  :global(.photo-item.is-video)::before {
     content: '▶';
     position: absolute;
     top: 50%;
@@ -911,8 +912,8 @@ const existingShareToken =
     z-index: 1;
   }
 
-  /* Smooth fade-in for grid images */
-  img {
+  /* Smooth fade-in for grid images (script-created, so :global here too) */
+  :global(.photo-item img) {
     animation: fadeIn 0.3s ease-in-out;
   }
   @keyframes fadeIn {
