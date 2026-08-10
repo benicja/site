@@ -331,13 +331,6 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
                 <button type="button" class="stepper-btn" data-servings-increment aria-label="Increase servings">+</button>
               </div>
             </div>
-            <div class="control-group">
-              <span class="control-label">Units</span>
-              <div class="unit-toggle" role="tablist">
-                <button type="button" class="unit-btn is-active" data-unit="metric" role="tab" aria-selected="true">Metric</button>
-                <button type="button" class="unit-btn" data-unit="us" role="tab" aria-selected="false">US</button>
-              </div>
-            </div>
           </div>
           <ul class="ingredients-list hydrate-ingredients">
             {(data.ingredients || []).map((ingredient) => (
@@ -505,7 +498,7 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
               <span class="ingredient-item">${ing.item}</span>
             </li>
           `).join('');
-          // Re-apply scaling/units after re-render
+          // Re-apply scaling after re-render
           window.dispatchEvent(new Event('recipe:ingredients-updated'));
         }
 
@@ -526,34 +519,10 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
   </script>
 
   <script is:inline>
-    // Ingredient scaler + unit toggle.
+    // Ingredient scaler.
     // Parses amount strings like "250g", "1 1/2 cups", "200 ml", "2", "1-2 tbsp"
     // Scales by (current servings / base servings)
-    // Optionally converts metric <-> US for common units.
     (function () {
-      const UNIT_PREF_KEY = 'recipe_unit_pref_v1';
-
-      // Conversion targets when switching units. Keep entries minimal — common cooking units only.
-      // metric -> us
-      const METRIC_TO_US = {
-        g:    { factor: 1 / 28.3495,  unit: 'oz' },
-        kg:   { factor: 35.274,       unit: 'oz' },
-        ml:   { factor: 1 / 29.5735,  unit: 'fl oz' },
-        l:    { factor: 33.814,       unit: 'fl oz' },
-      };
-      // us -> metric
-      const US_TO_METRIC = {
-        oz:     { factor: 28.3495,  unit: 'g' },
-        lb:     { factor: 453.592,  unit: 'g' },
-        'fl oz':{ factor: 29.5735,  unit: 'ml' },
-        cup:    { factor: 240,      unit: 'ml' },
-        cups:   { factor: 240,      unit: 'ml' },
-        tbsp:   { factor: 15,       unit: 'ml' },
-        tsp:    { factor: 5,        unit: 'ml' },
-      };
-      const METRIC_UNITS = new Set(Object.keys(METRIC_TO_US));
-      const US_UNITS = new Set(Object.keys(US_TO_METRIC));
-
       // Match leading number — supports "1", "1.5", "1/2", "1 1/2", "1-2", "1 to 2"
       // group 1 = whole number, group 2 = fraction "a/b", group 3 = range upper
       const NUM_RE = /^\s*(\d+(?:\.\d+)?)?\s*(?:(\d+)\s*\/\s*(\d+))?\s*(?:[-–to]+\s*(\d+(?:\.\d+)?(?:\s+\d+\s*\/\s*\d+)?))?/i;
@@ -612,21 +581,7 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
         return (Math.round(n * 100) / 100).toString();
       }
 
-      function convertUnit(value, unit, target) {
-        if (!unit) return { value, unit };
-        const u = unit.toLowerCase();
-        if (target === 'us' && METRIC_TO_US[u]) {
-          const { factor, unit: nu } = METRIC_TO_US[u];
-          return { value: value * factor, unit: nu };
-        }
-        if (target === 'metric' && US_TO_METRIC[u]) {
-          const { factor, unit: nu } = US_TO_METRIC[u];
-          return { value: value * factor, unit: nu };
-        }
-        return { value, unit };
-      }
-
-      function rewriteAmount(original, scale, unitMode) {
+      function rewriteAmount(original, scale) {
         if (!original) return '';
         const parsed = parseNumber(original);
         if (!parsed) return original; // no leading number — leave as-is (e.g. "to taste", "pinch")
@@ -635,29 +590,13 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
         const { unit, length: unitLen } = extractUnit(rest);
         const trailing = rest.slice(unitLen); // anything after the unit
 
-        let lo = parsed.value * scale;
-        let hi = parsed.upper != null ? parsed.upper * scale : null;
-        let unitOut = unit;
-
-        if (unit) {
-          const lcUnit = unit.toLowerCase();
-          const isMetric = METRIC_UNITS.has(lcUnit);
-          const isUs = US_UNITS.has(lcUnit);
-          if ((unitMode === 'us' && isMetric) || (unitMode === 'metric' && isUs)) {
-            const conv = convertUnit(lo, lcUnit, unitMode);
-            lo = conv.value;
-            unitOut = conv.unit;
-            if (hi != null) hi = convertUnit(hi, lcUnit, unitMode).value;
-          }
-        }
+        const lo = parsed.value * scale;
+        const hi = parsed.upper != null ? parsed.upper * scale : null;
 
         const numStr = hi != null
           ? `${formatNumber(lo)}–${formatNumber(hi)}`
           : formatNumber(lo);
-        const unitStr = unitOut ? (unitOut.length <= 2 || unitOut === 'fl oz' ? unitOut : ' ' + unitOut) : '';
-        // Preserve a space before unit if original had one and unit is wordy
-        const sep = unitOut && unitOut.length > 2 && unitOut !== 'fl oz' ? '' : (unitOut ? '' : '');
-        return `${numStr}${unitOut ? (unitOut === 'fl oz' || unitOut.length <= 3 ? unitOut : ' ' + unitOut) : ''}${trailing}`.trim();
+        return `${numStr}${unit ? (unit === 'fl oz' || unit.length <= 3 ? unit : ' ' + unit) : ''}${trailing}`.trim();
       }
 
       function applyAll() {
@@ -667,14 +606,13 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
         const valueEl = controls.querySelector('[data-servings-value]');
         const current = parseInt((valueEl && valueEl.textContent) || '1', 10) || 1;
         const scale = baseServings > 0 ? current / baseServings : 1;
-        const unitMode = controls.querySelector('.unit-btn.is-active')?.getAttribute('data-unit') || 'metric';
 
         document.querySelectorAll('.ingredient-amount').forEach((el) => {
           const original = el.getAttribute('data-original-amount') ?? el.textContent ?? '';
           if (!el.hasAttribute('data-original-amount')) el.setAttribute('data-original-amount', original);
-          const next = rewriteAmount(original, scale, unitMode);
+          const next = rewriteAmount(original, scale);
           el.textContent = next;
-          if (scale !== 1 || unitMode !== 'metric') el.classList.add('is-scaled');
+          if (scale !== 1) el.classList.add('is-scaled');
           else el.classList.remove('is-scaled');
         });
       }
@@ -703,30 +641,6 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
         inc?.addEventListener('click', () => {
           const cur = parseInt(valueEl.textContent || '1', 10);
           if (cur < 99) { valueEl.textContent = String(cur + 1); applyAll(); }
-        });
-
-        const savedUnit = (function () {
-          try { return localStorage.getItem(UNIT_PREF_KEY); } catch { return null; }
-        })();
-        if (savedUnit === 'us' || savedUnit === 'metric') {
-          controls.querySelectorAll('.unit-btn').forEach((b) => {
-            const active = b.getAttribute('data-unit') === savedUnit;
-            b.classList.toggle('is-active', active);
-            b.setAttribute('aria-selected', active ? 'true' : 'false');
-          });
-        }
-
-        controls.querySelectorAll('.unit-btn').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            controls.querySelectorAll('.unit-btn').forEach((b) => {
-              b.classList.remove('is-active');
-              b.setAttribute('aria-selected', 'false');
-            });
-            btn.classList.add('is-active');
-            btn.setAttribute('aria-selected', 'true');
-            try { localStorage.setItem(UNIT_PREF_KEY, btn.getAttribute('data-unit') || 'metric'); } catch {}
-            applyAll();
-          });
         });
 
         applyAll();
@@ -1135,31 +1049,6 @@ const pageDesc = isGhost ? 'Pending deploy' : data.description;
     font-weight: 600;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
-  }
-
-  .unit-toggle {
-    display: inline-flex;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 999px;
-    padding: 2px;
-  }
-
-  .unit-btn {
-    padding: 5px 12px;
-    background: transparent;
-    border: none;
-    color: #64748b;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
-  }
-
-  .unit-btn.is-active {
-    background: #0f172a;
-    color: #ffffff;
   }
 
   .ingredient-amount.is-scaled {
