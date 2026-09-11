@@ -83,8 +83,14 @@ export async function isMediaUrlInAlbum(albumId: string, url: string): Promise<b
   return !!album;
 }
 
-// Album covers are the one publicly viewable image class: the album list
-// shows them to signed-out visitors. Only exact cover URLs qualify
+// TOGGLE: when true, album covers are publicly viewable (the album list
+// shows them to signed-out visitors, and shared album links get a preview
+// image). When false, covers are as private as every other photo — only
+// approved members and share-token holders can load them, and the album
+// list shows placeholders to everyone else. Flip and redeploy to change.
+export const PUBLIC_ALBUM_COVERS = false;
+
+// Only exact cover URLs qualify for the public-cover exception
 export async function isAlbumCoverUrl(url: string): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from('gallery_albums')

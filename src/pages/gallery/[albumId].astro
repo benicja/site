@@ -4,7 +4,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { getAlbumById, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
-import { getAlbumIdForToken, getShareTokenForAlbum } from '../../lib/galleryAccess';
+import { PUBLIC_ALBUM_COVERS, getAlbumIdForToken, getShareTokenForAlbum } from '../../lib/galleryAccess';
 import AlbumCommentSection from '../../components/AlbumCommentSection';
 import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
@@ -452,7 +452,7 @@ const existingShareToken =
   title={`${getDisplayTitle(album.title)} - Gallery`}
   ogTitle={getDisplayTitle(album.title)}
   description={`View photos from ${getDisplayTitle(album.title)}`}
-  ogImage={album.cover_image_url
+  ogImage={PUBLIC_ALBUM_COVERS && album.cover_image_url
     ? `/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=600`
     : undefined}
   user={user}

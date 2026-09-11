@@ -5,9 +5,12 @@ import Layout from '../../layouts/Layout.astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../lib/auth';
 import { getAlbums, type Album, getAlbumDate, getDisplayDate, getDisplayTitle } from '../../lib/gallery';
 import { supabaseAdmin } from '../../lib/supabase';
+import { PUBLIC_ALBUM_COVERS } from '../../lib/galleryAccess';
 
-// The album list is public: anyone can browse titles and dates. Cover photos
-// and album contents stay behind sign-in + approval (or a share link)
+// The album list is public: anyone can browse titles and dates. Album
+// contents stay behind sign-in + approval (or a share link); covers follow
+// the PUBLIC_ALBUM_COVERS toggle — when private, non-approved visitors see
+// placeholders here instead
 let user = null;
 let isAdmin = false;
 let isApproved = false;
@@ -44,6 +47,8 @@ try {
   error = e instanceof Error ? e.message : 'Unknown error occurred';
 }
 
+
+const canSeeCovers = PUBLIC_ALBUM_COVERS || isApproved || isAdmin;
 
 const albumsWithDates = albums
   .map((album) => {
@@ -146,12 +151,21 @@ const albumsByYear = albumsWithDates.reduce((acc, item) => {
                   data-title={album.title.toLowerCase()}
                 >
                   <div class="aspect-square overflow-hidden relative">
-                    <img
-                      src={`/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=1000`}
-                      alt={album.title}
-                      class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
-                      loading="lazy"
-                    />
+                    {canSeeCovers ? (
+                      <img
+                        src={`/api/gallery/image?url=${encodeURIComponent(album.cover_image_url)}&w=1000`}
+                        alt={album.title}
+                        class="w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div class="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                    )}
                     <div class="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors duration-500" />
                     <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent pointer-events-none"></div>
 

@@ -1,14 +1,15 @@
 import type { APIRoute } from 'astro';
 import { SESSION_COOKIE, getApprovedUser, getUserFromSession } from '../../../lib/auth';
-import { getAlbumIdForToken, isAlbumCoverUrl, isKnownMediaUrl, isMediaUrlInAlbum } from '../../../lib/galleryAccess';
+import { PUBLIC_ALBUM_COVERS, getAlbumIdForToken, isAlbumCoverUrl, isKnownMediaUrl, isMediaUrlInAlbum } from '../../../lib/galleryAccess';
 
 export const prerender = false;
 
 // Photos are private. Serving one requires a signed-in user who is either an
 // approved member, or presenting a valid share token for the album this exact
-// URL belongs to. Album covers are the one exception: the public album list
-// shows them, so they're served without a session. The DB membership check
-// also stops the proxy being used as an open relay for arbitrary Google URLs
+// URL belongs to. Album covers can optionally be public (PUBLIC_ALBUM_COVERS
+// in galleryAccess.ts) for signed-out album-list browsing and link previews.
+// The DB membership check also stops the proxy being used as an open relay
+// for arbitrary Google URLs
 async function authorise(cookies: any, decodedUrl: string, shareToken: string | null): Promise<boolean> {
   const sessionId = cookies.get(SESSION_COOKIE)?.value;
   const user = sessionId ? await getUserFromSession(sessionId) : null;
@@ -23,7 +24,12 @@ async function authorise(cookies: any, decodedUrl: string, shareToken: string | 
     if (approvedUser && (await isKnownMediaUrl(decodedUrl))) return true;
   }
 
-  return await isAlbumCoverUrl(decodedUrl);
+  // Cover exception only applies while covers are configured as public
+  if (PUBLIC_ALBUM_COVERS) {
+    return await isAlbumCoverUrl(decodedUrl);
+  }
+
+  return false;
 }
 
 export const GET: APIRoute = async ({ url, cookies }) => {
