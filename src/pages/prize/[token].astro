@@ -1,0 +1,101 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { isValidPrizeToken, prizeImages } from '../../lib/prize';
+import '@fancyapps/ui/dist/fancybox/fancybox.css';
+
+// Secret-link page: nothing on the site links here and the token is the
+// only key. Anything but the exact token is indistinguishable from a page
+// that doesn't exist.
+const { token } = Astro.params;
+
+if (!isValidPrizeToken(token)) {
+  return new Response(null, { status: 404 });
+}
+
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+// The URL itself is the secret, so it must never travel in a Referer header
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+---
+
+<Layout
+  title="Claim your reward"
+  description="A private page"
+  noindex
+  enableTransitions={false}
+>
+  <div class="prize-page max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24">
+    <header class="text-center mb-12 md:mb-16">
+      <h1 class="text-5xl md:text-7xl lg:text-8xl font-serif font-black text-gray-900 tracking-tight">
+        Claim your reward
+      </h1>
+    </header>
+
+    {prizeImages.length === 0 ? (
+      <p class="py-20 text-center text-xl font-serif text-gray-400">
+        No prizes yet — add images to <code class="font-mono text-base">src/assets/prize/</code>.
+      </p>
+    ) : (
+      <ul class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6" role="list">
+        {prizeImages.map((img, i) => (
+          <li class="rise" style={`--rise-delay: ${Math.min(i, 8) * 60}ms`}>
+            <a
+              href={img.src}
+              data-fancybox="prize"
+              data-caption={`${i + 1} of ${prizeImages.length}`}
+              class="prize-card group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-gray-100 border border-gray-100 shadow-sm hover:shadow-xl hover:border-gray-900 transition-all duration-300"
+              aria-label={`Open prize ${i + 1} of ${prizeImages.length} full screen`}
+            >
+              <img
+                src={img.src}
+                width={img.width}
+                height={img.height}
+                alt={`Prize option ${i + 1}`}
+                loading={i < 6 ? 'eager' : 'lazy'}
+                decoding="async"
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              />
+              <span
+                class="absolute top-3 left-3 inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-full bg-white/90 backdrop-blur text-xs font-bold text-gray-900 shadow"
+              >
+                {i + 1}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</Layout>
+
+<script>
+  import { Fancybox } from '@fancyapps/ui';
+
+  // Same fullscreen viewer as the gallery: arrows, keyboard and swipe all
+  // move between prizes
+  Fancybox.bind('[data-fancybox="prize"]' as any, {
+    speed: 50,
+    placeFocusBack: false,
+    trapFocus: false
+  } as any);
+</script>
+
+<style>
+  :global(.fancybox__container) {
+    background: rgba(0, 0, 0, 0.95) !important;
+    border-top: 6px solid #111 !important;
+  }
+
+  :global(.fancybox__viewport) {
+    overflow: hidden !important;
+  }
+
+  :global(.fancybox__image) {
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+</style>

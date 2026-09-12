@@ -14,6 +14,7 @@ interface Props {
   isAdmin?: boolean;
   resolveAuth?: boolean;
   enableTransitions?: boolean;
+  noindex?: boolean;
 }
 
 const {
@@ -24,7 +25,8 @@ const {
   user: userProp,
   isAdmin: isAdminProp,
   resolveAuth = true,
-  enableTransitions = true
+  enableTransitions = true,
+  noindex = false
 } = Astro.props;
 
 // Absolute URL for link-preview crawlers (WhatsApp etc. reject relative ones)
@@ -64,6 +66,7 @@ if (resolveAuth) {
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="referrer" content="same-origin" />
+    {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <meta name="google-site-verification" content="Rg2Ai6YkTrQsPXB7I0oiSQta4HxbsxgrMWv5MCcY8TU" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Benicja's Kitchen" />
